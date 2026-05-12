@@ -1,4 +1,4 @@
-# CLAUDE.md — KernelForge GPU Kernel Generator
+#KernelForge GPU Kernel Generator
 
 ## Visión del proyecto
 
