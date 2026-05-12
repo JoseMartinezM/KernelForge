@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # KernelForge GPU Kernel Generator
 
 ## Visión del proyecto
