@@ -31,7 +31,7 @@
         in
         {
           default = pkgs.mkShell {
-            packages = [ pkgs.python3 pkgs.uv ];
+            packages = [ pkgs.python3 pkgs.uv pkgs.nodejs-slim_22 ];
 
             shellHook = ''
               export UV_PROJECT_ENVIRONMENT="$PWD/.venv"
