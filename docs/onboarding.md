@@ -8,16 +8,47 @@ KernelForge is currently a research workspace for improving LLM code generation 
   - Linux/macOS: `curl -LsSf https://astral.sh/uv/install.sh | sh`
   - Windows PowerShell: `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`
 - Python 3.11 or newer. `uv` can download a compatible Python if your system Python is too old.
-- A `LIGHTNING_API_KEY` only when running notebook cells that call the Lightning AI API.
+- A `LIGHTNING_API_KEY` for Lightning AI (GPT-5.5, DeepSeek V4 Pro). Get it at lightning.ai → Settings → API Keys.
+- A `GOOGLE_API_KEY` for Google AI Studio (Gemma 4B). Get it at aistudio.google.com → Get API Key.
 - A supported Linux GPU stack only when compiling/running Triton kernels locally.
 
 ## What is in the repo
 
 - `pyproject.toml` / `uv.lock`: Python environment definition. Base dependencies include marimo, OpenAI, numpy, ruff, basedpyright, and ipykernel.
 - `pyproject.toml` extra `rocm`: AMD ROCm PyTorch/Triton wheels from the PyTorch ROCm index.
-- `notebooks/benchmark.py`: marimo notebook that loads TritonBench-T, builds prompts, calls the Lightning AI OpenAI-compatible API, and displays cleaned model output.
+- `notebooks/benchmark.py`: single-model notebook — loads TritonBench-T, builds prompts, calls one Lightning AI model, displays cleaned output.
+- `notebooks/compare_models.py`: multi-model notebook — runs Gemma 4B, GPT-5.5, and DeepSeek V4 Pro on the same entries and saves results to `notebooks/results.json`.
+- `.env.example`: template for the API keys needed by the notebooks. Copy to `.env` and fill in your keys.
 - `vendor/TritonBench`: vendored benchmark data, generated model outputs, upstream evaluation scripts, and performance metrics.
 - `flake.nix`: optional Nix development shells that provide `uv` and, in the `rocm` shell, ROCm tools/libraries.
+
+## Setting up API keys
+
+All notebooks read API keys from environment variables. Before running any notebook:
+
+1. Copy the example file:
+   ```bash
+   # Linux/macOS
+   cp .env.example .env
+
+   # Windows PowerShell
+   Copy-Item .env.example .env
+   ```
+
+2. Open `.env` and replace the placeholder values with your real keys.
+
+3. Export the variables in your shell before launching marimo:
+   ```bash
+   # Linux/macOS
+   export LIGHTNING_API_KEY="..."
+   export GOOGLE_API_KEY="..."
+
+   # Windows PowerShell
+   $env:LIGHTNING_API_KEY = "..."
+   $env:GOOGLE_API_KEY = "..."
+   ```
+
+> The `.env` file is git-ignored. Never commit real API keys.
 
 ## Platform quick start
 
@@ -104,13 +135,19 @@ Treat the vendored evaluation scripts as upstream reference code, not turnkey pr
 ## Common commands
 
 ```bash
-# Start the notebook UI
+# Install dependencies (first time or after pyproject.toml changes)
+uv sync
+
+# Single-model notebook (original benchmark)
 uv run marimo edit notebooks/benchmark.py
 
-# Run the notebook as a marimo app
-uv run marimo run notebooks/benchmark.py
+# Multi-model comparison notebook (Gemma 4B + GPT-5.5 + DeepSeek V4 Pro)
+uv run marimo edit notebooks/compare_models.py
 
-# Static checks for Python files
+# Run comparison as a non-interactive app
+uv run marimo run notebooks/compare_models.py
+
+# Static checks
 uv run ruff check .
 uv run basedpyright
 ```
