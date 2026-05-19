@@ -5,9 +5,26 @@ requires-python = ">=3.11"
 dependencies = [
     "basedpyright>=1.39.4",
     "ipykernel>=7.2.0",
-    "joblib>=1.5.3",
     "marimo>=0.23.6",
     "numpy>=2.4.4",
     "openai>=2.36.0",
     "ruff>=0.15.13",
 ]
+
+[project.optional-dependencies]
+rocm = [
+    "torch>=2.12.0",
+    "torchvision>=0.27.0",
+    "triton-rocm>=3.7.0",
+]
+
+[[tool.uv.index]]
+name = "pytorch-rocm"
+url = "https://download.pytorch.org/whl/rocm7.2"
+explicit = true
+
+[tool.uv.sources]
+torch = [ { index = "pytorch-rocm", extra = "rocm" } ]
+torchvision = [ { index = "pytorch-rocm", extra = "rocm" } ]
+triton-rocm = [ { index = "pytorch-rocm", extra = "rocm" } ]
+
