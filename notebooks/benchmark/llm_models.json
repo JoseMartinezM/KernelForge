@@ -1,0 +1,64 @@
+{
+  "providers": {
+    "cloud": {
+      "url": "https://lightning.ai/api/v1",
+      "token": "LIGHTNING_API_KEY",
+      "rate_limits": {
+        "requests_per_minute": 15,
+        "tokens_per_minute": 120000,
+        "token_estimate_chars_per_token": 3
+      }
+    },
+    "local": {
+      "url": "http://127.0.0.1:8000/v1",
+      "token": null
+    }
+  },
+  "models": {
+    "google/gemma-4-E2B-it": {
+      "provider": "local",
+      "label": "Local Gemma 4 E2B BF16",
+      "generation": {
+        "max_tokens": 4000,
+        "temperature": 0
+      }
+    },
+    "lightning-ai/gemma-4-31B-it": {
+      "provider": "cloud",
+      "label": "Gemma 4 (Lightning.ai)",
+      "generation": {
+        "max_tokens": 4000,
+        "temperature": 0
+      },
+      "pricing": {
+        "input_per_million": 0.14,
+        "output_per_million": 0.4
+      }
+    },
+    "lightning-ai/deepseek-v4-pro": {
+      "provider": "cloud",
+      "label": "DeepSeek V4 Pro",
+      "generation": {
+        "max_tokens": 4000,
+        "temperature": 0
+      },
+      "pricing": {
+        "input_per_million": 0.89,
+        "output_per_million": 3.0
+      }
+    },
+    "openai/gpt-5.4-2026-03-05": {
+      "provider": "cloud",
+      "label": "GPT 5.4",
+      "generation": {
+        "max_completion_tokens": 8500,
+        "reasoning_effort": "low",
+        "temperature": 0
+      },
+      "pricing": {
+        "input_per_million": 2.5,
+        "output_per_million": 15.0
+      }
+    }
+  }
+}

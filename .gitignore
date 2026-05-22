@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 
 __marimo__
+notebooks/tritonbench_refs/
 
 .env*
 
@@ -29,6 +30,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+runs/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
