@@ -18,10 +18,10 @@ def load_t_datasets(
     tritonbench_root: str | Path = DEFAULT_TRITONBENCH_ROOT,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     root = Path(tritonbench_root)
-    with open(root / "data" / "TritonBench_T_simp_alpac_v1.json") as f:
+    with open(root / "data" / "TritonBench_T_simp_alpac_v1.json", encoding="utf-8") as f:
         simple_alpaca = json.load(f)
 
-    with open(root / "data" / "TritonBench_T_v1.jsonl") as f:
+    with open(root / "data" / "TritonBench_T_v1.jsonl", encoding="utf-8") as f:
         t_json = json.load(f)
 
     return simple_alpaca, t_json
@@ -67,7 +67,7 @@ def prepare_t_entry(
 ) -> dict[str, Any]:
     prepared = dict(entry)
     source_path = Path(tritonbench_root) / "data" / "TritonBench_T_v1" / entry["file"]
-    with open(source_path) as f:
+    with open(source_path, encoding="utf-8") as f:
         ref_code, test_code = f.read().split(TB_SEPARATOR, maxsplit=1)
 
     prepared["source_path"] = str(source_path)
@@ -174,7 +174,7 @@ def _run_test_script(
 
     with tempfile.TemporaryDirectory(prefix="tritonbench_") as workdir:
         script_path = Path(workdir) / "case.py"
-        script_path.write_text(script)
+        script_path.write_text(script, encoding="utf-8")
 
         env = os.environ.copy()
         env["TRITONBENCH_RESULT_PATH"] = str(result_path)
