@@ -12,6 +12,14 @@
     "local": {
       "url": "http://127.0.0.1:8000/v1",
       "token": null
+    },
+    "modal": {
+      "url": "https://vic-89368--example-vllm-inference-vllmserver-serve.modal.run/v1",
+      "token": null,
+      "headers": {
+        "Modal-Key": ["MODAL_API_KEY", "MODAL_API_TOKEN"],
+        "Modal-Secret": "MODAL_API_SECRET"
+      }
     }
   },
   "models": {
@@ -20,6 +28,14 @@
       "label": "Local Gemma 4 E2B BF16",
       "generation": {
         "max_tokens": 4000,
+        "temperature": 0
+      }
+    },
+    "google/gemma-4-E4B-it": {
+      "provider": "modal",
+      "label": "Modal Gemma 4 E4B vLLM",
+      "generation": {
+        "max_tokens": 8000,
         "temperature": 0
       }
     },

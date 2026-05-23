@@ -82,6 +82,13 @@ def load_llm_config(config_path: str | Path = DEFAULT_LLM_CONFIG_PATH) -> dict[s
     for provider_name, provider in providers.items():
         if not isinstance(provider, dict) or not provider.get("url"):
             raise ValueError(f"Provider {provider_name!r} must define a 'url'")
+        headers = provider.get("headers", {})
+        if not isinstance(headers, dict):
+            raise ValueError(f"Provider {provider_name!r} headers must be an object")
+        for header_name, env_names in headers.items():
+            if not isinstance(header_name, str) or not header_name:
+                raise ValueError(f"Provider {provider_name!r} header names must be non-empty strings")
+            _provider_header_env_names(env_names)
 
     for model_name, model in models.items():
         provider_name = model.get("provider") if isinstance(model, dict) else None
@@ -121,6 +128,40 @@ def provider_token(provider: dict[str, Any], environ: dict[str, str] | None = No
         raise ValueError("Provider 'token' field must be an environment variable name")
     environ = os.environ if environ is None else environ
     return environ.get(token_env)
+
+
+def _provider_header_env_names(value: Any) -> list[str]:
+    """Normalize a provider header env-var spec from the JSON config."""
+    if isinstance(value, str) and value:
+        return [value]
+    if isinstance(value, list) and value and all(isinstance(item, str) and item for item in value):
+        return value
+    raise ValueError("Provider header values must be an env var name or non-empty list of names")
+
+
+def provider_headers(
+    provider: dict[str, Any], environ: dict[str, str] | None = None
+) -> dict[str, str]:
+    """Resolve provider-specific HTTP headers from environment variables."""
+    headers = provider.get("headers") or {}
+    if not isinstance(headers, dict):
+        raise ValueError("Provider 'headers' field must be an object")
+
+    environ = os.environ if environ is None else environ
+    resolved = {}
+    for header_name, env_spec in headers.items():
+        env_names = _provider_header_env_names(env_spec)
+        for env_name in env_names:
+            value = environ.get(env_name)
+            if value:
+                resolved[header_name] = value
+                break
+        else:
+            raise ValueError(
+                f"Missing required header environment variable for {header_name}: "
+                f"one of {', '.join(env_names)}"
+            )
+    return resolved
 
 
 def messages_for_entry(entry: dict[str, Any], system_prompt: str = SYSTEM_PROMPT) -> list[dict[str, str]]:
@@ -523,6 +564,7 @@ def llm_request(
     top_p: float | None = None,
     timeout: int = 300,
     extra_body: dict[str, Any] | None = None,
+    default_headers: dict[str, str] | None = None,
 ) -> Any:
     """Make one OpenAI-compatible chat completion request."""
     if max_tokens is not None and max_completion_tokens is not None:
@@ -532,6 +574,7 @@ def llm_request(
         base_url=base_url.rstrip("/"),
         api_key=token or "EMPTY",
         timeout=timeout,
+        default_headers=default_headers,
     )
 
     kwargs: dict[str, Any] = {"model": model, "messages": messages}
@@ -577,10 +620,12 @@ def make_provider_client(provider: dict[str, Any], *, timeout: int = 300) -> Ope
     token = provider_token(provider)
     if provider.get("token") and token is None:
         raise ValueError(f"Missing required token environment variable: {provider['token']}")
+    headers = provider_headers(provider)
     return OpenAI(
         base_url=provider["url"].rstrip("/"),
         api_key=token or "EMPTY",
         timeout=timeout,
+        default_headers=headers or None,
     )
 
 
@@ -815,6 +860,7 @@ def call_llm(
     model_config = config["models"][model]
     provider = config["providers"][model_config["provider"]]
     token = provider_token(provider)
+    headers = provider_headers(provider)
     generation = model_generation_defaults(config, model)
 
     if max_tokens is not None:
@@ -844,6 +890,7 @@ def call_llm(
         top_p=generation.get("top_p"),
         timeout=timeout,
         extra_body=generation.get("extra_body"),
+        default_headers=headers or None,
     )
 
 
@@ -863,6 +910,10 @@ def _print_dry_run(tasks: list[dict[str, Any]], config: dict[str, Any], preview:
     for name in provider_names:
         provider = config["providers"][name]
         token_env = provider.get("token")
+        header_envs = {
+            header_name: _provider_header_env_names(env_names)
+            for header_name, env_names in (provider.get("headers") or {}).items()
+        }
         print(
             json.dumps(
                 {
@@ -870,6 +921,11 @@ def _print_dry_run(tasks: list[dict[str, Any]], config: dict[str, Any], preview:
                     "url": provider["url"],
                     "token_env": token_env,
                     "token_present": provider_token(provider) is not None if token_env else None,
+                    "header_envs": header_envs or None,
+                    "headers_present": {
+                        header_name: any(os.environ.get(env_name) for env_name in env_names)
+                        for header_name, env_names in header_envs.items()
+                    } or None,
                     "rate_limits": provider.get("rate_limits"),
                 },
                 indent=2,
