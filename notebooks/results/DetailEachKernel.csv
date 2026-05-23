@@ -1,0 +1,499 @@
+archivo,modelo,call@1,exe@1,error
+div.py,DeepSeek V4 Pro,✗,✗,
+fused_bmm_rmsnorm_gelu_dropout_sub.py,DeepSeek V4 Pro,✗,✗,
+sigmoid_conv2d.py,DeepSeek V4 Pro,✗,✗,
+tanh.py,DeepSeek V4 Pro,✗,✗,
+relu_sqrt.py,DeepSeek V4 Pro,✓,✗,test_results.test_case_4: dtype torch.int64 != torch.float32
+sqrt.py,DeepSeek V4 Pro,✓,✓,
+solve_multiple_lu.py,DeepSeek V4 Pro,✓,✓,
+sub.py,DeepSeek V4 Pro,✓,✓,
+sigmoid_argmax.py,DeepSeek V4 Pro,✗,✗,
+svd.py,DeepSeek V4 Pro,✗,✗,
+rsqrt.py,DeepSeek V4 Pro,✓,✗,test_results.test_case_3: tensor values differ
+i0.py,DeepSeek V4 Pro,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+fused_mv_logsoftmax_dropout.py,DeepSeek V4 Pro,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+add.py,DeepSeek V4 Pro,✗,✗,
+dropout_relu_batch_norm_conv2d.py,DeepSeek V4 Pro,✗,✗,
+fused_index_select_eq.py,DeepSeek V4 Pro,✗,✗,
+argmax.py,DeepSeek V4 Pro,✗,✗,
+fused_lu_solve.py,DeepSeek V4 Pro,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: type Tensor != str
+normalize_pairwise_distance.py,DeepSeek V4 Pro,✗,✗,
+max.py,DeepSeek V4 Pro,✓,✗,test_results.test_case_1[0]: tensor values differ; test_results.test_case_1[1]: tensor values differ; test_results.test_case_2[0]: tensor values differ; test_results.test_case_2[1]: tensor values differ; test_results.test_case_3[0]: tensor values differ; test_results.test_case_3[1]: tensor values differ; test_results.test_case_4[0]: tensor values differ; test_results.test_case_4[1]: tensor values differ
+relu.py,DeepSeek V4 Pro,✓,✓,
+log_softmax_linear.py,DeepSeek V4 Pro,✗,✗,
+least_squares_qr.py,DeepSeek V4 Pro,✗,✗,
+determinant_via_qr.py,DeepSeek V4 Pro,✓,✓,
+sqrt_tanh.py,DeepSeek V4 Pro,✗,✗,
+fused_tile_exp.py,DeepSeek V4 Pro,✗,✗,
+silu_batch_norm.py,DeepSeek V4 Pro,✗,✗,
+index_fill_.py,DeepSeek V4 Pro,✗,✗,
+mean.py,DeepSeek V4 Pro,✓,✓,
+fused_cross_entropy_softmax_layernorm.py,DeepSeek V4 Pro,✗,✗,
+logsumexp.py,DeepSeek V4 Pro,✓,✗,test_results.test_case_1: tensor values differ
+eig.py,DeepSeek V4 Pro,✗,✗,
+fused_mv_sigmoid_sub.py,DeepSeek V4 Pro,✗,✗,
+add_gelu.py,DeepSeek V4 Pro,✗,✗,
+fused_cosine_embedding_loss_with_normalization.py,DeepSeek V4 Pro,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+fused_embedding_add_tanh.py,DeepSeek V4 Pro,✗,✗,
+log1p.py,DeepSeek V4 Pro,✗,✗,
+fused_transformer_block.py,DeepSeek V4 Pro,✗,✗,
+sigmoid_batch_norm.py,DeepSeek V4 Pro,✗,✗,
+zeta.py,DeepSeek V4 Pro,✗,✗,
+fused_hardsigmoid_batch_norm.py,DeepSeek V4 Pro,✗,✗,
+symmetric_matrix_vector_norm.py,DeepSeek V4 Pro,✗,✗,
+softplus_linear.py,DeepSeek V4 Pro,✗,✗,
+fused_svd_reconstruct.py,DeepSeek V4 Pro,✗,✗,
+selu.py,DeepSeek V4 Pro,✗,✗,
+scaled_add_norm.py,DeepSeek V4 Pro,✓,✓,
+fused_mul_add_logsoftmax_dropout_bmm.py,DeepSeek V4 Pro,✗,✗,
+sqrt_exp.py,DeepSeek V4 Pro,✓,✓,
+cos_avg_pool1d.py,DeepSeek V4 Pro,✓,✗,test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+leaky_relu_conv2d.py,DeepSeek V4 Pro,✗,✗,
+sum_std.py,DeepSeek V4 Pro,✗,✗,
+mul_relu.py,DeepSeek V4 Pro,✓,✓,
+gelu_conv2d.py,DeepSeek V4 Pro,✗,✗,
+fused_instance_norm_selu_conv2d.py,DeepSeek V4 Pro,✗,✗,
+chebyshev_polynomial_t.py,DeepSeek V4 Pro,✗,✗,
+logit.py,DeepSeek V4 Pro,✓,✓,
+solve_symmetric_ldl.py,DeepSeek V4 Pro,✗,✗,
+exp_sqrt.py,DeepSeek V4 Pro,✓,✓,
+scaled_add_dot.py,DeepSeek V4 Pro,✗,✗,
+combined_activation.py,DeepSeek V4 Pro,✗,✗,
+tensordot.py,DeepSeek V4 Pro,✗,✗,
+asin.py,DeepSeek V4 Pro,✗,✗,
+qr.py,DeepSeek V4 Pro,✓,✗,"test_results.test_case_1[0]: tensor values differ; test_results.test_case_1[1]: tensor values differ; test_results.test_case_2[0]: tensor values differ; test_results.test_case_2[1]: tensor values differ; test_results.test_case_3[0]: shape (2, 2) != (0,); test_results.test_case_3[1]: tensor values differ; test_results.test_case_4[0]: tensor values differ; test_results.test_case_4[1]: tensor values differ"
+fused_pairwise_distance_adaptive_avg_pool2d.py,DeepSeek V4 Pro,✗,✗,
+fused_masked_select_add_gelu.py,DeepSeek V4 Pro,✗,✗,
+fused_layer_norm_relu_linear.py,DeepSeek V4 Pro,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+add_mean.py,DeepSeek V4 Pro,✗,✗,
+SGD.py,DeepSeek V4 Pro,✗,✗,
+fused_add_mul_groupnorm.py,DeepSeek V4 Pro,✗,✗,
+conv2d.py,DeepSeek V4 Pro,✗,✗,
+normalized_cosine_similarity.py,DeepSeek V4 Pro,✗,✗,
+fused_cholesky_solve.py,DeepSeek V4 Pro,✗,✗,
+matmul.py,DeepSeek V4 Pro,✗,✗,
+fused_cross_entropy_log_softmax.py,DeepSeek V4 Pro,✗,✗,
+fused_gather_masked_fill.py,DeepSeek V4 Pro,✗,✗,
+addmm.py,DeepSeek V4 Pro,✓,✓,
+sigmoid_adaptive_avg_pool2d.py,DeepSeek V4 Pro,✗,✗,
+cos.py,DeepSeek V4 Pro,✓,✓,
+fused_bmm_dropout_gelu.py,DeepSeek V4 Pro,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+trunc.py,DeepSeek V4 Pro,✓,✓,
+log_tanh.py,DeepSeek V4 Pro,✗,✗,
+exp.py,DeepSeek V4 Pro,✓,✓,
+matrix_multiply_symmetric.py,DeepSeek V4 Pro,✓,✓,
+matrix_power_eig.py,DeepSeek V4 Pro,✗,✗,
+fused_hardshrink_dropout.py,DeepSeek V4 Pro,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+fused_avg_pool2d_cosine_similarity.py,DeepSeek V4 Pro,✗,✗,
+tensordot_rsqrt.py,DeepSeek V4 Pro,✓,✓,
+erfc_sqrt.py,DeepSeek V4 Pro,✓,✗,test_results.test_case_1[0]: tensor values differ; test_results.test_case_2[0]: tensor values differ; test_results.test_case_3[0]: tensor values differ; test_results.test_case_4[0]: tensor values differ
+dropout_sigmoid_linear.py,DeepSeek V4 Pro,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+softmax_log.py,DeepSeek V4 Pro,✗,✗,
+gammaln.py,DeepSeek V4 Pro,✗,✗,
+batch_norm.py,DeepSeek V4 Pro,✗,✗,
+bitwise_and.py,DeepSeek V4 Pro,✗,✗,
+sub_gelu.py,DeepSeek V4 Pro,✗,✗,
+gelu_std.py,DeepSeek V4 Pro,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+permute_copy.py,DeepSeek V4 Pro,✓,✗,test_results.test_case_4: tensor values differ
+softmax_mul.py,DeepSeek V4 Pro,✗,✗,
+digamma.py,DeepSeek V4 Pro,✗,✗,
+rad2deg_sqrt.py,DeepSeek V4 Pro,✓,✓,
+bitwise_and_binomial.py,DeepSeek V4 Pro,✗,✗,
+bessel_j1.py,DeepSeek V4 Pro,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+gelu_min.py,DeepSeek V4 Pro,✗,✗,
+lu.py,DeepSeek V4 Pro,✓,✗,"test_results.test_case_1[1]: tensor values differ; test_results.test_case_1[2]: tensor values differ; test_results.test_case_2[0]: tensor values differ; test_results.test_case_2[1]: tensor values differ; test_results.test_case_2[2]: tensor values differ; test_results.test_case_3[0]: shape (2, 2) != (0,); test_results.test_case_3[1]: tensor values differ; test_results.test_case_3[2]: tensor values differ; test_results.test_case_4[0]: tensor values differ; test_results.test_case_4[1]: tensor values differ; test_results.test_case_4[2]: tensor values differ"
+pseudoinverse_svd.py,DeepSeek V4 Pro,✓,✓,
+exp_mean.py,DeepSeek V4 Pro,✗,✗,
+low_rank_svd_approximation.py,DeepSeek V4 Pro,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+min.py,DeepSeek V4 Pro,✗,✗,
+symmetric_mm_and_abs_sum.py,DeepSeek V4 Pro,✓,✓,
+determinant_lu.py,DeepSeek V4 Pro,✓,✗,test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+tanh_linear.py,DeepSeek V4 Pro,✗,✗,reference execution failed
+sum.py,DeepSeek V4 Pro,✓,✓,
+logspace.py,DeepSeek V4 Pro,✗,✗,
+solve_and_add_scaled_vector.py,DeepSeek V4 Pro,✗,✗,
+pixel_shuffle_conv2d.py,DeepSeek V4 Pro,✗,✗,
+matrix_vector_dot.py,DeepSeek V4 Pro,✓,✓,
+min_gelu.py,DeepSeek V4 Pro,✗,✗,
+pow.py,DeepSeek V4 Pro,✗,✗,
+erf.py,DeepSeek V4 Pro,✓,✓,
+sigmoid.py,DeepSeek V4 Pro,✓,✓,
+gelu.py,DeepSeek V4 Pro,✗,✗,
+relu_max_pool2d_conv2d.py,DeepSeek V4 Pro,✗,✗,
+det.py,DeepSeek V4 Pro,✗,✗,
+floor.py,DeepSeek V4 Pro,✗,✗,
+rand.py,DeepSeek V4 Pro,✗,✗,
+fused_bmm_rmsnorm_gelu_dropout.py,DeepSeek V4 Pro,✗,✗,
+mul_sub.py,DeepSeek V4 Pro,✗,✗,
+ldl_factor.py,DeepSeek V4 Pro,✗,✗,Can't get attribute 'LDLResult' on <module '__main__' from '/content/KernelForge/notebooks/evaluate/run_eval.py'>
+abs.py,DeepSeek V4 Pro,✓,✓,
+cholesky_solve.py,DeepSeek V4 Pro,✗,✗,
+mul.py,DeepSeek V4 Pro,✗,✗,
+leaky_relu.py,DeepSeek V4 Pro,✓,✓,
+softmax.py,DeepSeek V4 Pro,✓,✗,test_results.test_case_4: tensor values differ
+invert_matrix_lu.py,DeepSeek V4 Pro,✗,✗,
+tril_mm_and_scale.py,DeepSeek V4 Pro,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ
+std.py,DeepSeek V4 Pro,✗,✗,
+airy_ai.py,DeepSeek V4 Pro,✗,✗,
+signbit.py,DeepSeek V4 Pro,✗,✗,
+solve.py,DeepSeek V4 Pro,✗,✗,
+matrix_multiply_and_row_dot.py,DeepSeek V4 Pro,✓,✓,
+elu_linear.py,DeepSeek V4 Pro,✗,✗,
+fused_pairwise_distance_normalize.py,DeepSeek V4 Pro,✗,✗,
+polygamma.py,DeepSeek V4 Pro,✓,✓,
+fused_hstack_div.py,DeepSeek V4 Pro,✗,✗,
+Adam.py,DeepSeek V4 Pro,✓,✗,"test_results.test_case_1: keys dict_keys(['lr', 'betas', 'eps', 'weight_decay', 'amsgrad', 'maximize', 'foreach', 'capturable', 'differentiable', 'fused']) != dict_keys(['lr', 'betas', 'eps', 'weight_decay', 'amsgrad', 'maximize', 'foreach', 'capturable', 'differentiable', 'fused', 'decoupled_weight_decay']); test_results.test_case_2: keys dict_keys(['lr', 'betas', 'eps', 'weight_decay', 'amsgrad', 'maximize', 'foreach', 'capturable', 'differentiable', 'fused']) != dict_keys(['lr', 'betas', 'eps', 'weight_decay', 'amsgrad', 'maximize', 'foreach', 'capturable', 'differentiable', 'fused', 'decoupled_weight_decay']); test_results.test_case_3: keys dict_keys(['lr', 'betas', 'eps', 'weight_decay', 'amsgrad', 'maximize', 'foreach', 'capturable', 'differentiable', 'fused']) != dict_keys(['lr', 'betas', 'eps', 'weight_decay', 'amsgrad', 'maximize', 'foreach', 'capturable', 'differentiable', 'fused', 'decoupled_weight_decay']); test_results.test_case_4: keys dict_keys(['lr', 'betas', 'eps', 'weight_decay', 'amsgrad', 'maximize', 'foreach', 'capturable', 'differentiable', 'fused']) != dict_keys(['lr', 'betas', 'eps', 'weight_decay', 'amsgrad', 'maximize', 'foreach', 'capturable', 'differentiable', 'fused', 'decoupled_weight_decay'])"
+broadcast_tensors.py,DeepSeek V4 Pro,✗,✗,
+log.py,DeepSeek V4 Pro,✓,✓,
+adaptive_avg_pool2d.py,DeepSeek V4 Pro,✗,✗,reference execution failed
+quantize_dynamic.py,DeepSeek V4 Pro,✗,✗,reference execution failed
+relu_conv2d.py,DeepSeek V4 Pro,✗,✗,
+conv2d_add.py,DeepSeek V4 Pro,✗,✗,
+signbit_bitwise_and.py,DeepSeek V4 Pro,✓,✗,test_results.test_case_3[1]: dtype torch.bool != torch.int8
+ifftshift.py,DeepSeek V4 Pro,✗,✗,
+fused_repeat_interleave_log_softmax.py,DeepSeek V4 Pro,✗,✗,
+ones_like.py,DeepSeek V4 Pro,✗,✗,
+cholesky.py,DeepSeek V4 Pro,✗,✗,
+autocast.py,DeepSeek V4 Pro,✓,✓,
+reciprocal.py,DeepSeek V4 Pro,✓,✓,
+cos_signbit.py,DeepSeek V4 Pro,✓,✓,
+spectral_norm_eig.py,DeepSeek V4 Pro,✓,✗,test_results.test_case_2: tensor values differ; test_results.test_case_4: tensor values differ
+fftn.py,DeepSeek V4 Pro,✗,✗,
+grid_sample.py,DeepSeek V4 Pro,✗,✗,
+fused_silu_layer_norm_conv2d.py,DeepSeek V4 Pro,✗,✗,
+fused_fractional_max_pool2d_with_relu.py,DeepSeek V4 Pro,✗,✗,
+relu_batch_norm_conv2d.py,DeepSeek V4 Pro,✗,✗,reference execution failed
+fused_qr_solve.py,DeepSeek V4 Pro,✗,✗,
+grid_sample_with_affine.py,DeepSeek V4 Pro,✗,✗,
+fused_bmm_rmsnorm_gelu_dropout_sub.py,GPT 5.4,✗,✗,
+div.py,GPT 5.4,✓,✓,
+sigmoid_conv2d.py,GPT 5.4,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+tanh.py,GPT 5.4,✓,✗,test_results.test_case_3: tensor values differ
+solve_multiple_lu.py,GPT 5.4,✓,✗,test_results.test_case_4: tensor values differ
+relu_sqrt.py,GPT 5.4,✗,✗,
+sqrt.py,GPT 5.4,✓,✓,
+rsqrt.py,GPT 5.4,✓,✗,test_results.test_case_3: tensor values differ
+i0.py,GPT 5.4,✓,✓,
+fused_index_select_eq.py,GPT 5.4,✓,✓,
+fused_silu_layer_norm_conv2d.py,GPT 5.4,✗,✗,
+sub.py,GPT 5.4,✗,✗,
+sigmoid_argmax.py,GPT 5.4,✗,✗,
+fused_mv_logsoftmax_dropout.py,GPT 5.4,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+dropout_relu_batch_norm_conv2d.py,GPT 5.4,✗,✗,
+relu.py,GPT 5.4,✓,✓,
+argmax.py,GPT 5.4,✗,✗,
+svd.py,GPT 5.4,✗,✗,
+add.py,GPT 5.4,✗,✗,
+grid_sample.py,GPT 5.4,✗,✗,
+log_softmax_linear.py,GPT 5.4,✗,✗,
+sqrt_tanh.py,GPT 5.4,✗,✗,
+max.py,GPT 5.4,✗,✗,
+normalize_pairwise_distance.py,GPT 5.4,✗,✗,
+silu_batch_norm.py,GPT 5.4,✗,✗,
+least_squares_qr.py,GPT 5.4,✓,✓,
+fused_lu_solve.py,GPT 5.4,✓,✗,test_results.test_case_4: type Tensor != str
+determinant_via_qr.py,GPT 5.4,✗,✗,
+fused_tile_exp.py,GPT 5.4,✗,✗,
+index_fill_.py,GPT 5.4,✗,✗,
+log1p.py,GPT 5.4,✓,✓,
+fused_cross_entropy_softmax_layernorm.py,GPT 5.4,✗,✗,The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+mean.py,GPT 5.4,✓,✓,
+fused_cosine_embedding_loss_with_normalization.py,GPT 5.4,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+sigmoid_batch_norm.py,GPT 5.4,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+zeta.py,GPT 5.4,✓,✗,test_results.test_case_4: tensor values differ
+symmetric_matrix_vector_norm.py,GPT 5.4,✗,✗,
+fused_embedding_add_tanh.py,GPT 5.4,✗,✗,
+fused_transformer_block.py,GPT 5.4,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+add_gelu.py,GPT 5.4,✗,✗,
+eig.py,GPT 5.4,✗,✗,
+logsumexp.py,GPT 5.4,✗,✗,
+fused_mv_sigmoid_sub.py,GPT 5.4,✓,✓,
+leaky_relu_conv2d.py,GPT 5.4,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+fused_svd_reconstruct.py,GPT 5.4,✓,✓,
+scaled_add_norm.py,GPT 5.4,✓,✗,test_results.test_case_2: 2.9580397605895996 != 2.9580399990081787; test_results.test_case_3: 3.741657257080078 != 3.7416574954986572; test_results.test_case_4: 3.741657257080078 != 3.7416574954986572
+softplus_linear.py,GPT 5.4,✓,✓,
+mul_relu.py,GPT 5.4,✓,✓,
+cos_avg_pool1d.py,GPT 5.4,✗,✗,
+fused_hardsigmoid_batch_norm.py,GPT 5.4,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+selu.py,GPT 5.4,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ
+chebyshev_polynomial_t.py,GPT 5.4,✗,✗,
+fused_mul_add_logsoftmax_dropout_bmm.py,GPT 5.4,✗,✗,
+sum_std.py,GPT 5.4,✗,✗,
+gelu_conv2d.py,GPT 5.4,✗,✗,
+exp_sqrt.py,GPT 5.4,✓,✓,
+logit.py,GPT 5.4,✓,✓,
+sqrt_exp.py,GPT 5.4,✓,✓,
+asin.py,GPT 5.4,✓,✓,
+scaled_add_dot.py,GPT 5.4,✓,✓,
+fused_fractional_max_pool2d_with_relu.py,GPT 5.4,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3[0]: tensor values differ; test_results.test_case_3[1]: tensor values differ; test_results.test_case_4: tensor values differ
+tensordot.py,GPT 5.4,✗,✗,
+solve_symmetric_ldl.py,GPT 5.4,✗,✗,
+add_mean.py,GPT 5.4,✗,✗,
+SGD.py,GPT 5.4,✗,✗,
+combined_activation.py,GPT 5.4,✗,✗,
+fused_pairwise_distance_adaptive_avg_pool2d.py,GPT 5.4,✓,✗,"test_results.test_case_1: shape (2, 8, 8) != (2,); test_results.test_case_2: shape (2, 16, 16) != (2,); test_results.test_case_3: shape (2, 8, 8) != (2,); test_results.test_case_4: shape (2, 1, 8, 8) != (2, 1, 1, 1)"
+fused_masked_select_add_gelu.py,GPT 5.4,✗,✗,
+fused_layer_norm_relu_linear.py,GPT 5.4,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+fused_cholesky_solve.py,GPT 5.4,✓,✓,
+qr.py,GPT 5.4,✓,✗,"test_results.test_case_1[0]: tensor values differ; test_results.test_case_1[1]: tensor values differ; test_results.test_case_2[0]: tensor values differ; test_results.test_case_2[1]: tensor values differ; test_results.test_case_3[0]: shape (2, 0) != (0,); test_results.test_case_3[1]: tensor values differ; test_results.test_case_4[0]: tensor values differ; test_results.test_case_4[1]: tensor values differ"
+normalized_cosine_similarity.py,GPT 5.4,✓,✓,
+conv2d.py,GPT 5.4,✗,✗,
+fused_instance_norm_selu_conv2d.py,GPT 5.4,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ
+fused_gather_masked_fill.py,GPT 5.4,✗,✗,
+fused_add_mul_groupnorm.py,GPT 5.4,✗,✗,
+relu_batch_norm_conv2d.py,GPT 5.4,✗,✗,reference execution failed
+trunc.py,GPT 5.4,✓,✓,
+cos.py,GPT 5.4,✓,✓,
+log_tanh.py,GPT 5.4,✓,✗,"test_results: keys dict_keys(['test_case_1', 'test_case_2', 'test_case_3']) != dict_keys(['test_case_1', 'test_case_2', 'test_case_3', 'test_case_4'])"
+exp.py,GPT 5.4,✓,✓,
+fused_cross_entropy_log_softmax.py,GPT 5.4,✓,✗,test_results.test_case_2: tensor values differ
+matmul.py,GPT 5.4,✓,✓,
+matrix_power_eig.py,GPT 5.4,✓,✗,test_results.test_case_1: dtype torch.complex64 != torch.float32; test_results.test_case_2: dtype torch.complex64 != torch.float32; test_results.test_case_4: dtype torch.complex64 != torch.float32
+matrix_multiply_symmetric.py,GPT 5.4,✓,✓,
+addmm.py,GPT 5.4,✓,✓,
+sigmoid_adaptive_avg_pool2d.py,GPT 5.4,✗,✗,
+fused_avg_pool2d_cosine_similarity.py,GPT 5.4,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+fused_hardshrink_dropout.py,GPT 5.4,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+fused_bmm_dropout_gelu.py,GPT 5.4,✗,✗,
+fused_qr_solve.py,GPT 5.4,✓,✓,
+rad2deg_sqrt.py,GPT 5.4,✓,✓,
+erfc_sqrt.py,GPT 5.4,✓,✓,
+tensordot_rsqrt.py,GPT 5.4,✓,✓,
+bitwise_and.py,GPT 5.4,✓,✓,
+dropout_sigmoid_linear.py,GPT 5.4,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+gelu_std.py,GPT 5.4,✗,✗,
+softmax_log.py,GPT 5.4,✓,✓,
+gammaln.py,GPT 5.4,✓,✓,
+sub_gelu.py,GPT 5.4,✗,✗,
+bessel_j1.py,GPT 5.4,✓,✓,
+batch_norm.py,GPT 5.4,✗,✗,
+permute_copy.py,GPT 5.4,✓,✗,test_results.test_case_4: tensor values differ
+low_rank_svd_approximation.py,GPT 5.4,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+exp_mean.py,GPT 5.4,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+symmetric_mm_and_abs_sum.py,GPT 5.4,✓,✓,
+pseudoinverse_svd.py,GPT 5.4,✓,✓,
+min.py,GPT 5.4,✓,✓,
+gelu_min.py,GPT 5.4,✗,✗,
+sum.py,GPT 5.4,✓,✓,
+logspace.py,GPT 5.4,✗,✗,
+softmax_mul.py,GPT 5.4,✓,✓,
+sigmoid.py,GPT 5.4,✓,✓,
+erf.py,GPT 5.4,✓,✓,
+determinant_lu.py,GPT 5.4,✓,✓,
+tanh_linear.py,GPT 5.4,✗,✗,reference execution failed
+matrix_vector_dot.py,GPT 5.4,✓,✓,
+gelu.py,GPT 5.4,✗,✗,
+min_gelu.py,GPT 5.4,✗,✗,
+lu.py,GPT 5.4,✓,✗,test_results.test_case_1[0]: tensor values differ; test_results.test_case_1[1]: tensor values differ; test_results.test_case_1[2]: tensor values differ; test_results.test_case_2[0]: tensor values differ; test_results.test_case_2[1]: tensor values differ; test_results.test_case_2[2]: tensor values differ; test_results.test_case_3[1]: tensor values differ; test_results.test_case_3[2]: tensor values differ; test_results.test_case_4[0]: tensor values differ; test_results.test_case_4[1]: tensor values differ; test_results.test_case_4[2]: tensor values differ
+pow.py,GPT 5.4,✗,✗,
+digamma.py,GPT 5.4,✗,✗,
+relu_max_pool2d_conv2d.py,GPT 5.4,✗,✗,
+solve_and_add_scaled_vector.py,GPT 5.4,✓,✓,
+bitwise_and_binomial.py,GPT 5.4,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+abs.py,GPT 5.4,✓,✓,
+floor.py,GPT 5.4,✓,✗,test_results.test_case_4: tensor values differ
+pixel_shuffle_conv2d.py,GPT 5.4,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+softmax.py,GPT 5.4,✓,✗,test_results.test_case_4: tensor values differ
+fused_bmm_rmsnorm_gelu_dropout.py,GPT 5.4,✗,✗,
+leaky_relu.py,GPT 5.4,✓,✓,
+rand.py,GPT 5.4,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+signbit.py,GPT 5.4,✓,✓,
+std.py,GPT 5.4,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+ldl_factor.py,GPT 5.4,✗,✗,
+airy_ai.py,GPT 5.4,✗,✗,
+elu_linear.py,GPT 5.4,✓,✓,
+mul.py,GPT 5.4,✗,✗,
+det.py,GPT 5.4,✗,✗,
+broadcast_tensors.py,GPT 5.4,✓,✓,
+fused_pairwise_distance_normalize.py,GPT 5.4,✗,✗,
+mul_sub.py,GPT 5.4,✗,✗,
+Adam.py,GPT 5.4,✓,✗,"test_results.test_case_1: keys dict_keys(['lr', 'betas', 'eps', 'weight_decay', 'amsgrad', 'foreach', 'maximize', 'capturable', 'differentiable', 'fused']) != dict_keys(['lr', 'betas', 'eps', 'weight_decay', 'amsgrad', 'maximize', 'foreach', 'capturable', 'differentiable', 'fused', 'decoupled_weight_decay']); test_results.test_case_2: keys dict_keys(['lr', 'betas', 'eps', 'weight_decay', 'amsgrad', 'foreach', 'maximize', 'capturable', 'differentiable', 'fused']) != dict_keys(['lr', 'betas', 'eps', 'weight_decay', 'amsgrad', 'maximize', 'foreach', 'capturable', 'differentiable', 'fused', 'decoupled_weight_decay']); test_results.test_case_3: keys dict_keys(['lr', 'betas', 'eps', 'weight_decay', 'amsgrad', 'foreach', 'maximize', 'capturable', 'differentiable', 'fused']) != dict_keys(['lr', 'betas', 'eps', 'weight_decay', 'amsgrad', 'maximize', 'foreach', 'capturable', 'differentiable', 'fused', 'decoupled_weight_decay']); test_results.test_case_4: keys dict_keys(['lr', 'betas', 'eps', 'weight_decay', 'amsgrad', 'foreach', 'maximize', 'capturable', 'differentiable', 'fused']) != dict_keys(['lr', 'betas', 'eps', 'weight_decay', 'amsgrad', 'maximize', 'foreach', 'capturable', 'differentiable', 'fused', 'decoupled_weight_decay'])"
+polygamma.py,GPT 5.4,✗,✗,
+matrix_multiply_and_row_dot.py,GPT 5.4,✓,✓,
+relu_conv2d.py,GPT 5.4,✗,✗,
+log.py,GPT 5.4,✗,✗,
+quantize_dynamic.py,GPT 5.4,✗,✗,reference execution failed
+autocast.py,GPT 5.4,✓,✓,
+solve.py,GPT 5.4,✓,✗,"test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: type Tensor != str; test_results.test_case_4: 'A must be batches of square matrices' != 'linalg.solve: A must be batches of square matrices, but they are 2 by 3 matrices'"
+tril_mm_and_scale.py,GPT 5.4,✓,✓,
+ones_like.py,GPT 5.4,✗,✗,
+adaptive_avg_pool2d.py,GPT 5.4,✗,✗,reference execution failed
+cos_signbit.py,GPT 5.4,✗,✗,
+signbit_bitwise_and.py,GPT 5.4,✓,✗,test_results.test_case_3[1]: dtype torch.bool != torch.int8
+reciprocal.py,GPT 5.4,✓,✓,
+cholesky.py,GPT 5.4,✗,✗,
+conv2d_add.py,GPT 5.4,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+fused_repeat_interleave_log_softmax.py,GPT 5.4,✓,✓,
+cholesky_solve.py,GPT 5.4,✓,✓,
+ifftshift.py,GPT 5.4,✓,✓,
+spectral_norm_eig.py,GPT 5.4,✗,✗,
+fftn.py,GPT 5.4,✗,✗,
+grid_sample_with_affine.py,GPT 5.4,✗,✗,
+invert_matrix_lu.py,GPT 5.4,✓,✓,
+fused_hstack_div.py,GPT 5.4,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+tanh.py,Modal Gemma 4 E4B vLLM,✗,✗,
+sqrt.py,Modal Gemma 4 E4B vLLM,✓,✓,
+relu_sqrt.py,Modal Gemma 4 E4B vLLM,✗,✗,
+sigmoid_argmax.py,Modal Gemma 4 E4B vLLM,✗,✗,
+fused_bmm_rmsnorm_gelu_dropout_sub.py,Modal Gemma 4 E4B vLLM,✗,✗,
+solve_multiple_lu.py,Modal Gemma 4 E4B vLLM,✗,✗,
+sub.py,Modal Gemma 4 E4B vLLM,✗,✗,
+div.py,Modal Gemma 4 E4B vLLM,✗,✗,
+sigmoid_conv2d.py,Modal Gemma 4 E4B vLLM,✗,✗,
+rsqrt.py,Modal Gemma 4 E4B vLLM,✓,✗,test_results.test_case_3: tensor values differ
+i0.py,Modal Gemma 4 E4B vLLM,✗,✗,
+grid_sample.py,Modal Gemma 4 E4B vLLM,✗,✗,
+svd.py,Modal Gemma 4 E4B vLLM,✗,✗,
+add.py,Modal Gemma 4 E4B vLLM,✗,✗,
+fused_mv_logsoftmax_dropout.py,Modal Gemma 4 E4B vLLM,✗,✗,
+dropout_relu_batch_norm_conv2d.py,Modal Gemma 4 E4B vLLM,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+fused_lu_solve.py,Modal Gemma 4 E4B vLLM,✗,✗,
+fused_silu_layer_norm_conv2d.py,Modal Gemma 4 E4B vLLM,✗,✗,
+fused_index_select_eq.py,Modal Gemma 4 E4B vLLM,✗,✗,
+argmax.py,Modal Gemma 4 E4B vLLM,✗,✗,
+normalize_pairwise_distance.py,Modal Gemma 4 E4B vLLM,✗,✗,
+relu.py,Modal Gemma 4 E4B vLLM,✗,✗,
+max.py,Modal Gemma 4 E4B vLLM,✗,✗,
+log_softmax_linear.py,Modal Gemma 4 E4B vLLM,✗,✗,
+least_squares_qr.py,Modal Gemma 4 E4B vLLM,✓,✓,
+sqrt_tanh.py,Modal Gemma 4 E4B vLLM,✗,✗,
+determinant_via_qr.py,Modal Gemma 4 E4B vLLM,✗,✗,
+silu_batch_norm.py,Modal Gemma 4 E4B vLLM,✗,✗,
+fused_cross_entropy_softmax_layernorm.py,Modal Gemma 4 E4B vLLM,✗,✗,
+mean.py,Modal Gemma 4 E4B vLLM,✗,✗,
+fused_tile_exp.py,Modal Gemma 4 E4B vLLM,✗,✗,
+index_fill_.py,Modal Gemma 4 E4B vLLM,✗,✗,
+logsumexp.py,Modal Gemma 4 E4B vLLM,✓,✓,
+eig.py,Modal Gemma 4 E4B vLLM,✓,✗,test_results.test_case_1[0]: dtype torch.float32 != torch.complex64; test_results.test_case_1[1]: dtype torch.float32 != torch.complex64; test_results.test_case_2[0]: dtype torch.float32 != torch.complex64; test_results.test_case_2[1]: dtype torch.float32 != torch.complex64; test_results.test_case_3[0]: dtype torch.float32 != torch.complex64; test_results.test_case_3[1]: dtype torch.float32 != torch.complex64; test_results.test_case_4[0]: dtype torch.float32 != torch.complex64; test_results.test_case_4[1]: dtype torch.float32 != torch.complex64
+fused_embedding_add_tanh.py,Modal Gemma 4 E4B vLLM,✗,✗,
+add_gelu.py,Modal Gemma 4 E4B vLLM,✗,✗,
+log1p.py,Modal Gemma 4 E4B vLLM,✗,✗,
+fused_cosine_embedding_loss_with_normalization.py,Modal Gemma 4 E4B vLLM,✗,✗,
+fused_mv_sigmoid_sub.py,Modal Gemma 4 E4B vLLM,✗,✗,
+zeta.py,Modal Gemma 4 E4B vLLM,✗,✗,
+fused_hardsigmoid_batch_norm.py,Modal Gemma 4 E4B vLLM,✗,✗,
+sigmoid_batch_norm.py,Modal Gemma 4 E4B vLLM,✗,✗,
+fused_transformer_block.py,Modal Gemma 4 E4B vLLM,✗,✗,
+symmetric_matrix_vector_norm.py,Modal Gemma 4 E4B vLLM,✗,✗,
+softplus_linear.py,Modal Gemma 4 E4B vLLM,✗,✗,
+selu.py,Modal Gemma 4 E4B vLLM,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ
+fused_svd_reconstruct.py,Modal Gemma 4 E4B vLLM,✗,✗,
+sqrt_exp.py,Modal Gemma 4 E4B vLLM,✓,✓,
+fused_mul_add_logsoftmax_dropout_bmm.py,Modal Gemma 4 E4B vLLM,✗,✗,
+scaled_add_norm.py,Modal Gemma 4 E4B vLLM,✗,✗,
+sum_std.py,Modal Gemma 4 E4B vLLM,✓,✗,"test_results.test_case_1: tensor values differ; test_results.test_case_4: shape (1, 1) != ()"
+mul_relu.py,Modal Gemma 4 E4B vLLM,✓,✓,
+cos_avg_pool1d.py,Modal Gemma 4 E4B vLLM,✗,✗,
+fused_instance_norm_selu_conv2d.py,Modal Gemma 4 E4B vLLM,✓,✗,"test_results.test_case_1: tensor values differ; test_results.test_case_2: shape (1, 3, 3, 3) != (1, 3, 2, 2); test_results.test_case_3: shape (1, 3, 3, 3) != (1, 3, 5, 5)"
+leaky_relu_conv2d.py,Modal Gemma 4 E4B vLLM,✗,✗,
+logit.py,Modal Gemma 4 E4B vLLM,✗,✗,
+chebyshev_polynomial_t.py,Modal Gemma 4 E4B vLLM,✗,✗,
+exp_sqrt.py,Modal Gemma 4 E4B vLLM,✓,✓,
+fused_fractional_max_pool2d_with_relu.py,Modal Gemma 4 E4B vLLM,✗,✗,
+solve_symmetric_ldl.py,Modal Gemma 4 E4B vLLM,✗,✗,
+gelu_conv2d.py,Modal Gemma 4 E4B vLLM,✗,✗,
+scaled_add_dot.py,Modal Gemma 4 E4B vLLM,✗,✗,
+qr.py,Modal Gemma 4 E4B vLLM,✗,✗,
+asin.py,Modal Gemma 4 E4B vLLM,✗,✗,
+tensordot.py,Modal Gemma 4 E4B vLLM,✓,✗,test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ
+combined_activation.py,Modal Gemma 4 E4B vLLM,✗,✗,
+add_mean.py,Modal Gemma 4 E4B vLLM,✗,✗,
+fused_masked_select_add_gelu.py,Modal Gemma 4 E4B vLLM,✗,✗,
+fused_layer_norm_relu_linear.py,Modal Gemma 4 E4B vLLM,✗,✗,
+SGD.py,Modal Gemma 4 E4B vLLM,✗,✗,
+fused_pairwise_distance_adaptive_avg_pool2d.py,Modal Gemma 4 E4B vLLM,✗,✗,
+fused_add_mul_groupnorm.py,Modal Gemma 4 E4B vLLM,✗,✗,
+conv2d.py,Modal Gemma 4 E4B vLLM,✗,✗,
+relu_batch_norm_conv2d.py,Modal Gemma 4 E4B vLLM,✗,✗,reference execution failed
+normalized_cosine_similarity.py,Modal Gemma 4 E4B vLLM,✗,✗,
+matmul.py,Modal Gemma 4 E4B vLLM,✗,✗,
+fused_cholesky_solve.py,Modal Gemma 4 E4B vLLM,✗,✗,
+fused_gather_masked_fill.py,Modal Gemma 4 E4B vLLM,✗,✗,
+fused_qr_solve.py,Modal Gemma 4 E4B vLLM,✓,✓,
+cos.py,Modal Gemma 4 E4B vLLM,✓,✓,
+addmm.py,Modal Gemma 4 E4B vLLM,✗,✗,
+fused_cross_entropy_log_softmax.py,Modal Gemma 4 E4B vLLM,✗,✗,
+trunc.py,Modal Gemma 4 E4B vLLM,✗,✗,
+log_tanh.py,Modal Gemma 4 E4B vLLM,✗,✗,
+exp.py,Modal Gemma 4 E4B vLLM,✓,✓,
+fused_bmm_dropout_gelu.py,Modal Gemma 4 E4B vLLM,✗,✗,
+sigmoid_adaptive_avg_pool2d.py,Modal Gemma 4 E4B vLLM,✗,✗,
+fused_hardshrink_dropout.py,Modal Gemma 4 E4B vLLM,✗,✗,
+matrix_power_eig.py,Modal Gemma 4 E4B vLLM,✗,✗,
+erfc_sqrt.py,Modal Gemma 4 E4B vLLM,✓,✗,test_results.test_case_1[0]: tensor values differ; test_results.test_case_2[0]: tensor values differ; test_results.test_case_3[0]: tensor values differ; test_results.test_case_4[0]: tensor values differ
+fused_avg_pool2d_cosine_similarity.py,Modal Gemma 4 E4B vLLM,✗,✗,
+matrix_multiply_symmetric.py,Modal Gemma 4 E4B vLLM,✗,✗,
+tensordot_rsqrt.py,Modal Gemma 4 E4B vLLM,✓,✓,
+softmax_log.py,Modal Gemma 4 E4B vLLM,✗,✗,
+gammaln.py,Modal Gemma 4 E4B vLLM,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+bitwise_and.py,Modal Gemma 4 E4B vLLM,✗,✗,
+batch_norm.py,Modal Gemma 4 E4B vLLM,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+dropout_sigmoid_linear.py,Modal Gemma 4 E4B vLLM,✗,✗,
+sub_gelu.py,Modal Gemma 4 E4B vLLM,✗,✗,
+gelu_std.py,Modal Gemma 4 E4B vLLM,✗,✗,
+digamma.py,Modal Gemma 4 E4B vLLM,✗,✗,
+rad2deg_sqrt.py,Modal Gemma 4 E4B vLLM,✓,✓,
+permute_copy.py,Modal Gemma 4 E4B vLLM,✗,✗,
+softmax_mul.py,Modal Gemma 4 E4B vLLM,✗,✗,
+bessel_j1.py,Modal Gemma 4 E4B vLLM,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+bitwise_and_binomial.py,Modal Gemma 4 E4B vLLM,✗,✗,
+lu.py,Modal Gemma 4 E4B vLLM,✗,✗,
+gelu_min.py,Modal Gemma 4 E4B vLLM,✗,✗,
+pseudoinverse_svd.py,Modal Gemma 4 E4B vLLM,✓,✓,
+grid_sample_with_affine.py,Modal Gemma 4 E4B vLLM,✗,✗,
+exp_mean.py,Modal Gemma 4 E4B vLLM,✗,✗,
+min.py,Modal Gemma 4 E4B vLLM,✗,✗,
+determinant_lu.py,Modal Gemma 4 E4B vLLM,✓,✗,"test_results.test_case_1: shape (2, 1) != (); test_results.test_case_2: shape (3, 1) != (); test_results.test_case_3: shape (2, 2, 1) != (2,); test_results.test_case_4: shape (4, 1) != ()"
+symmetric_mm_and_abs_sum.py,Modal Gemma 4 E4B vLLM,✗,✗,
+low_rank_svd_approximation.py,Modal Gemma 4 E4B vLLM,✗,✗,
+tanh_linear.py,Modal Gemma 4 E4B vLLM,✗,✗,reference execution failed
+sum.py,Modal Gemma 4 E4B vLLM,✓,✗,test_results.test_case_4: dtype torch.float32 != torch.float64
+logspace.py,Modal Gemma 4 E4B vLLM,✗,✗,
+solve_and_add_scaled_vector.py,Modal Gemma 4 E4B vLLM,✗,✗,
+matrix_vector_dot.py,Modal Gemma 4 E4B vLLM,✗,✗,
+pow.py,Modal Gemma 4 E4B vLLM,✗,✗,
+min_gelu.py,Modal Gemma 4 E4B vLLM,✗,✗,
+sigmoid.py,Modal Gemma 4 E4B vLLM,✓,✓,
+erf.py,Modal Gemma 4 E4B vLLM,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ
+det.py,Modal Gemma 4 E4B vLLM,✗,✗,
+gelu.py,Modal Gemma 4 E4B vLLM,✗,✗,
+floor.py,Modal Gemma 4 E4B vLLM,✓,✗,test_results.test_case_4: tensor values differ
+rand.py,Modal Gemma 4 E4B vLLM,✗,✗,
+pixel_shuffle_conv2d.py,Modal Gemma 4 E4B vLLM,✗,✗,
+relu_max_pool2d_conv2d.py,Modal Gemma 4 E4B vLLM,✗,✗,
+fused_bmm_rmsnorm_gelu_dropout.py,Modal Gemma 4 E4B vLLM,✗,✗,
+abs.py,Modal Gemma 4 E4B vLLM,✓,✓,
+mul_sub.py,Modal Gemma 4 E4B vLLM,✗,✗,
+ldl_factor.py,Modal Gemma 4 E4B vLLM,✗,✗,
+mul.py,Modal Gemma 4 E4B vLLM,✗,✗,
+leaky_relu.py,Modal Gemma 4 E4B vLLM,✓,✓,
+softmax.py,Modal Gemma 4 E4B vLLM,✗,✗,
+invert_matrix_lu.py,Modal Gemma 4 E4B vLLM,✓,✓,
+cholesky_solve.py,Modal Gemma 4 E4B vLLM,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+std.py,Modal Gemma 4 E4B vLLM,✗,✗,
+airy_ai.py,Modal Gemma 4 E4B vLLM,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+signbit.py,Modal Gemma 4 E4B vLLM,✗,✗,
+tril_mm_and_scale.py,Modal Gemma 4 E4B vLLM,✗,✗,
+polygamma.py,Modal Gemma 4 E4B vLLM,✗,✗,
+matrix_multiply_and_row_dot.py,Modal Gemma 4 E4B vLLM,✗,✗,
+solve.py,Modal Gemma 4 E4B vLLM,✗,✗,
+elu_linear.py,Modal Gemma 4 E4B vLLM,✗,✗,
+Adam.py,Modal Gemma 4 E4B vLLM,✗,✗,
+fused_hstack_div.py,Modal Gemma 4 E4B vLLM,✗,✗,
+log.py,Modal Gemma 4 E4B vLLM,✓,✓,
+fused_pairwise_distance_normalize.py,Modal Gemma 4 E4B vLLM,✗,✗,
+broadcast_tensors.py,Modal Gemma 4 E4B vLLM,✓,✗,"test_results.test_case_1[0]: shape () != (3,); test_results.test_case_2[1]: shape (1,) != (3,); test_results.test_case_3[1]: shape (3,) != (1, 3); test_results.test_case_4[0]: shape (3, 1) != (3, 3); test_results.test_case_4[1]: shape (1, 3) != (3, 3)"
+relu_conv2d.py,Modal Gemma 4 E4B vLLM,✓,✗,test_results.test_case_1: tensor values differ; test_results.test_case_2: tensor values differ; test_results.test_case_3: tensor values differ; test_results.test_case_4: tensor values differ
+quantize_dynamic.py,Modal Gemma 4 E4B vLLM,✗,✗,reference execution failed
+ifftshift.py,Modal Gemma 4 E4B vLLM,✓,✓,
+signbit_bitwise_and.py,Modal Gemma 4 E4B vLLM,✗,✗,
+conv2d_add.py,Modal Gemma 4 E4B vLLM,✗,✗,
+adaptive_avg_pool2d.py,Modal Gemma 4 E4B vLLM,✗,✗,reference execution failed
+ones_like.py,Modal Gemma 4 E4B vLLM,✗,✗,
+autocast.py,Modal Gemma 4 E4B vLLM,✓,✓,
+reciprocal.py,Modal Gemma 4 E4B vLLM,✓,✓,
+fused_repeat_interleave_log_softmax.py,Modal Gemma 4 E4B vLLM,✗,✗,
+cos_signbit.py,Modal Gemma 4 E4B vLLM,✗,✗,
+spectral_norm_eig.py,Modal Gemma 4 E4B vLLM,✓,✓,
+cholesky.py,Modal Gemma 4 E4B vLLM,✗,✗,
+fftn.py,Modal Gemma 4 E4B vLLM,✗,✗,
