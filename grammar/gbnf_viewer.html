@@ -1,1890 +1,2276 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>GBNF Grammar Debugger</title>
-
-  <!-- CodeMirror 5 is CDN-friendly and includes a battle-tested Vim keymap. -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.css" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/searchcursor.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/search.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/comment/comment.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/mode/simple.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/keymap/vim.min.js"></script>
-
-  <style>
-    :root {
-      color-scheme: dark;
-      --bg: #111318;
-      --panel: #181b22;
-      --panel-2: #1f2430;
-      --panel-3: #252b38;
-      --text: #d7deea;
-      --muted: #7f8ca3;
-      --faint: #536074;
-      --border: #2f3748;
-      --accent: #7cdbff;
-      --accent-2: #b58cff;
-      --ok: #54d990;
-      --warn: #ffd166;
-      --bad: #ff6b7a;
-      --shadow: rgba(0, 0, 0, 0.34);
-      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-
-    * { box-sizing: border-box; }
-
-    html, body {
-      height: 100%;
-      margin: 0;
-      background: radial-gradient(circle at top left, rgba(124, 219, 255, 0.08), transparent 32rem), var(--bg);
-      color: var(--text);
-      font-family: var(--sans);
-      overflow: hidden;
-    }
-
-    .app {
-      height: 100vh;
-      display: grid;
-      grid-template-rows: auto 1fr;
-    }
-
-    header {
-      min-height: 58px;
-      padding: 12px 18px;
-      display: grid;
-      grid-template-columns: auto minmax(220px, 1fr) auto;
-      align-items: center;
-      gap: 18px;
-      border-bottom: 1px solid var(--border);
-      background: rgba(17, 19, 24, 0.92);
-      backdrop-filter: blur(14px);
-      box-shadow: 0 12px 30px var(--shadow);
-      z-index: 10;
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      min-width: 260px;
-    }
-
-    .logo {
-      width: 34px;
-      height: 34px;
-      padding: 0;
-      border: 0;
-      border-radius: 11px;
-      background:
-        linear-gradient(135deg, rgba(124, 219, 255, 0.92), rgba(181, 140, 255, 0.88)),
-        #202636;
-      box-shadow: 0 0 30px rgba(124, 219, 255, 0.16);
-      display: grid;
-      place-items: center;
-      color: #0d1017;
-      font: 900 18px/1 var(--mono);
-      cursor: pointer;
-      transition: filter 140ms ease, transform 140ms ease, box-shadow 140ms ease;
-    }
-
-    .logo:hover {
-      filter: brightness(1.1);
-      transform: translateY(-1px);
-    }
-
-    .logo.vim-active {
-      box-shadow: 0 0 0 2px rgba(181, 140, 255, 0.44), 0 0 30px rgba(181, 140, 255, 0.28);
-    }
-
-    h1 {
-      margin: 0;
-      font-size: 17px;
-      letter-spacing: 0.2px;
-      line-height: 1.15;
-    }
-
-    .subtitle {
-      margin-top: 2px;
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .status-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      border: 1px solid var(--border);
-      background: var(--panel-2);
-      border-radius: 999px;
-      padding: 7px 12px;
-      font-size: 13px;
-      white-space: nowrap;
-    }
-
-    .dot {
-      width: 9px;
-      height: 9px;
-      border-radius: 50%;
-      background: var(--muted);
-      box-shadow: 0 0 16px currentColor;
-    }
-
-    .status-pill.ok { color: var(--ok); border-color: rgba(84, 217, 144, 0.34); }
-    .status-pill.bad { color: var(--bad); border-color: rgba(255, 107, 122, 0.36); }
-    .status-pill.warn { color: var(--warn); border-color: rgba(255, 209, 102, 0.36); }
-    .status-pill.ok .dot { background: var(--ok); }
-    .status-pill.bad .dot { background: var(--bad); }
-    .status-pill.warn .dot { background: var(--warn); }
-
-    .toolbar {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: right;
-      min-width: 0;
-    }
-
-    select, button, summary {
-      border: 1px solid var(--border);
-      background: var(--panel-2);
-      color: var(--text);
-      border-radius: 9px;
-      padding: 7px 10px;
-      font: 13px var(--sans);
-      outline: none;
-    }
-
-    button, summary {
-      cursor: pointer;
-      transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
-    }
-
-    button:hover, summary:hover { background: var(--panel-3); border-color: #465169; }
-    button:active, summary:active { transform: translateY(1px); }
-
-    .example-menu {
-      position: relative;
-    }
-
-    .example-menu summary {
-      list-style: none;
-      user-select: none;
-    }
-
-    .example-menu summary::-webkit-details-marker { display: none; }
-
-    .example-list {
-      position: absolute;
-      top: calc(100% + 8px);
-      left: 0;
-      z-index: 50;
-      min-width: 220px;
-      padding: 7px;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: #111721;
-      box-shadow: 0 18px 34px rgba(0, 0, 0, 0.45);
-    }
-
-    .example-list button {
-      width: 100%;
-      display: block;
-      text-align: left;
-      border: 0;
-      background: transparent;
-      border-radius: 8px;
-      padding: 8px 9px;
-      color: var(--text);
-    }
-
-    .example-list button:hover {
-      background: var(--panel-2);
-    }
-
-    main {
-      min-height: 0;
-      display: grid;
-      grid-template-columns: minmax(260px, 0.98fr) 7px minmax(260px, 1.12fr) minmax(320px, 0.9fr);
-      gap: 1px;
-      background: var(--border);
-    }
-
-    main.resizing,
-    main.resizing * {
-      cursor: col-resize !important;
-      user-select: none !important;
-    }
-
-    .splitter {
-      min-width: 0;
-      background: linear-gradient(90deg, var(--border), #3d485d, var(--border));
-      cursor: col-resize;
-      position: relative;
-    }
-
-    .splitter::after {
-      content: "";
-      position: absolute;
-      inset: 42% 2px;
-      border-radius: 999px;
-      background: rgba(215, 222, 234, 0.34);
-    }
-
-    .splitter:hover,
-    .splitter.active {
-      background: linear-gradient(90deg, var(--border), rgba(124, 219, 255, 0.55), var(--border));
-    }
-
-    .pane {
-      min-width: 0;
-      min-height: 0;
-      background: var(--panel);
-      display: grid;
-      grid-template-rows: auto 1fr;
-      position: relative;
-    }
-
-    .pane-title {
-      height: 43px;
-      padding: 0 13px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      border-bottom: 1px solid var(--border);
-      background: rgba(31, 36, 48, 0.78);
-    }
-
-    .pane-title strong {
-      font-size: 12px;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: #aeb9cd;
-    }
-
-    .hint {
-      color: var(--muted);
-      font-size: 12px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .editor-host {
-      min-width: 0;
-      min-height: 0;
-      overflow: hidden;
-    }
-
-    .CodeMirror {
-      width: 100%;
-      height: 100%;
-      font-family: var(--mono);
-      font-size: 13px;
-      line-height: 1.55;
-      background: #151922 !important;
-    }
-
-    .CodeMirror-gutters { background: #151922 !important; border-right: 1px solid var(--border) !important; }
-    .CodeMirror-linenumber { color: #536074 !important; }
-
-    .CodeMirror-dialog {
-      position: absolute;
-      inset: auto 0 0 0;
-      z-index: 30;
-      border-top: 1px solid #3a455b;
-      border-bottom: 0;
-      background: #0f141d;
-      color: var(--text);
-      padding: 7px 10px;
-      font: 13px var(--mono);
-      box-shadow: 0 -10px 24px rgba(0, 0, 0, 0.32);
-    }
-
-    .CodeMirror-dialog-top {
-      top: auto;
-      bottom: 0;
-      border-bottom: 0;
-      border-top: 1px solid #3a455b;
-    }
-
-    .CodeMirror-dialog input {
-      width: 70%;
-      border: 0;
-      outline: none;
-      background: transparent;
-      color: var(--text);
-      font: 13px var(--mono);
-    }
-
-    .CodeMirror-dialog button {
-      margin-left: 8px;
-      padding: 3px 8px;
-      border-radius: 6px;
-    }
-
-    .cm-gbnf-rule { color: #7cdbff; font-weight: 650; }
-    .cm-gbnf-op { color: #ffcc66; }
-    .cm-gbnf-string { color: #a5e075; }
-    .cm-gbnf-comment { color: #66758d; font-style: italic; }
-    .cm-gbnf-class { color: #ffb86c; }
-
-    .cm-parse-error {
-      background: rgba(255, 107, 122, 0.18);
-      border-bottom: 2px solid rgba(255, 107, 122, 0.8);
-    }
-
-    .cm-parse-success {
-      background: rgba(84, 217, 144, 0.10);
-    }
-
-    .results {
-      min-height: 0;
-      overflow: auto;
-      padding: 14px;
-      background:
-        linear-gradient(180deg, rgba(124, 219, 255, 0.035), transparent 180px),
-        var(--panel);
-    }
-
-    .card {
-      border: 1px solid var(--border);
-      background: rgba(31, 36, 48, 0.72);
-      border-radius: 14px;
-      margin-bottom: 12px;
-      overflow: hidden;
-    }
-
-    .card-head {
-      padding: 11px 12px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-    }
-
-    .card-head h2 {
-      margin: 0;
-      font-size: 13px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: #bcc7d9;
-    }
-
-    .card-body { padding: 12px; }
-
-    .kv {
-      display: grid;
-      grid-template-columns: 88px 1fr;
-      gap: 8px 12px;
-      font-size: 13px;
-    }
-
-    .kv .k { color: var(--muted); }
-    .kv .v { color: var(--text); overflow-wrap: anywhere; }
-    .mono { font-family: var(--mono); }
-    .ok-text { color: var(--ok); }
-    .bad-text { color: var(--bad); }
-    .warn-text { color: var(--warn); }
-
-    .expected-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 8px;
-    }
-
-    .chip {
-      font: 12px var(--mono);
-      color: #dbe7f7;
-      background: #111721;
-      border: 1px solid #344055;
-      border-radius: 999px;
-      padding: 4px 8px;
-    }
-
-    .tree {
-      font-family: var(--mono);
-      font-size: 12px;
-      line-height: 1.55;
-      white-space: pre-wrap;
-      color: #cfd8e8;
-    }
-
-    .tree .range { color: var(--muted); }
-    .tree .name { color: var(--accent); }
-    .tree .lit { color: #a5e075; }
-
-    .mini-note {
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.5;
-    }
-
-    .vim-indicator {
-      color: var(--accent-2);
-      font: 12px var(--mono);
-      margin-top: 3px;
-      display: none;
-    }
-
-    .vim-indicator.active {
-      display: block;
-    }
-
-    .modal-backdrop {
-      position: fixed;
-      inset: 0;
-      z-index: 100;
-      display: none;
-      place-items: center;
-      padding: 22px;
-      background: rgba(5, 8, 13, 0.72);
-      backdrop-filter: blur(8px);
-    }
-
-    .modal-backdrop.open {
-      display: grid;
-    }
-
-    .modal {
-      width: min(460px, 100%);
-      border: 1px solid #3a455b;
-      border-radius: 18px;
-      background: #171c26;
-      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.56);
-      overflow: hidden;
-    }
-
-    .modal h2 {
-      margin: 0;
-      padding: 16px 18px;
-      border-bottom: 1px solid var(--border);
-      font-size: 16px;
-    }
-
-    .modal p {
-      margin: 0;
-      padding: 16px 18px;
-      color: #b7c2d6;
-      line-height: 1.55;
-      font-size: 14px;
-    }
-
-    .modal-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      padding: 14px 18px 18px;
-    }
-
-    .primary-button {
-      border-color: rgba(181, 140, 255, 0.45);
-      background: rgba(181, 140, 255, 0.18);
-    }
-
-    @media (max-width: 1120px) {
-      body { overflow: auto; }
-      .app { min-height: 100vh; height: auto; }
-      main { grid-template-columns: 1fr; grid-template-rows: 440px 440px minmax(360px, auto); }
-      .splitter { display: none; }
-      header { position: sticky; top: 0; }
-    }
-  </style>
-</head>
-<body>
-  <div class="app">
-    <header>
-      <div class="brand">
-        <button id="vimToggle" class="logo" type="button" title="Double-click to toggle Vim mode" aria-label="Double-click to toggle Vim mode">∴</button>
-        <div>
-          <h1>GBNF Grammar Debugger</h1>
-          <div class="subtitle">Real-time GGML BNF matching for Triton grammar experiments</div>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GBNF Grammar Debugger</title>
+
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.css"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/searchcursor.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/search.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/comment/comment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/mode/simple.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/keymap/vim.min.js"></script>
+
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #111318;
+        --panel: #181b22;
+        --panel-2: #1f2430;
+        --panel-3: #252b38;
+        --text: #d7deea;
+        --muted: #7f8ca3;
+        --faint: #536074;
+        --border: #2f3748;
+        --accent: #7cdbff;
+        --accent-2: #b58cff;
+        --ok: #54d990;
+        --warn: #ffd166;
+        --bad: #ff6b7a;
+        --shadow: rgba(0, 0, 0, 0.34);
+        --mono:
+          ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        --sans:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        background:
+          radial-gradient(
+            circle at top left,
+            rgba(124, 219, 255, 0.08),
+            transparent 32rem
+          ),
+          var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+        overflow: hidden;
+      }
+
+      .app {
+        height: 100vh;
+        display: grid;
+        grid-template-rows: auto 1fr;
+      }
+
+      header {
+        min-height: 58px;
+        padding: 12px 18px;
+        display: grid;
+        grid-template-columns: auto minmax(220px, 1fr) auto;
+        align-items: center;
+        gap: 18px;
+        border-bottom: 1px solid var(--border);
+        background: rgba(17, 19, 24, 0.92);
+        backdrop-filter: blur(14px);
+        box-shadow: 0 12px 30px var(--shadow);
+        z-index: 10;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 260px;
+      }
+
+      .logo {
+        width: 34px;
+        height: 34px;
+        padding: 0;
+        border: 0;
+        border-radius: 11px;
+        background:
+          linear-gradient(
+            135deg,
+            rgba(124, 219, 255, 0.92),
+            rgba(181, 140, 255, 0.88)
+          ),
+          #202636;
+        box-shadow: 0 0 30px rgba(124, 219, 255, 0.16);
+        display: grid;
+        place-items: center;
+        color: #0d1017;
+        font: 900 18px/1 var(--mono);
+        cursor: pointer;
+        transition:
+          filter 140ms ease,
+          transform 140ms ease,
+          box-shadow 140ms ease;
+      }
+      .logo:hover {
+        filter: brightness(1.1);
+        transform: translateY(-1px);
+      }
+      .logo.vim-active {
+        box-shadow:
+          0 0 0 2px rgba(181, 140, 255, 0.44),
+          0 0 30px rgba(181, 140, 255, 0.28);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 17px;
+        letter-spacing: 0.2px;
+        line-height: 1.15;
+      }
+      .subtitle {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid var(--border);
+        background: var(--panel-2);
+        border-radius: 999px;
+        padding: 7px 12px;
+        font-size: 13px;
+        white-space: nowrap;
+      }
+      .dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--muted);
+        box-shadow: 0 0 16px currentColor;
+      }
+      .status-pill.ok {
+        color: var(--ok);
+        border-color: rgba(84, 217, 144, 0.34);
+      }
+      .status-pill.bad {
+        color: var(--bad);
+        border-color: rgba(255, 107, 122, 0.36);
+      }
+      .status-pill.warn {
+        color: var(--warn);
+        border-color: rgba(255, 209, 102, 0.36);
+      }
+      .status-pill.ok .dot {
+        background: var(--ok);
+      }
+      .status-pill.bad .dot {
+        background: var(--bad);
+      }
+      .status-pill.warn .dot {
+        background: var(--warn);
+      }
+
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: right;
+        min-width: 0;
+      }
+      select,
+      button,
+      summary {
+        border: 1px solid var(--border);
+        background: var(--panel-2);
+        color: var(--text);
+        border-radius: 9px;
+        padding: 7px 10px;
+        font: 13px var(--sans);
+        outline: none;
+      }
+      button,
+      summary {
+        cursor: pointer;
+        transition:
+          background 120ms ease,
+          border-color 120ms ease,
+          transform 120ms ease;
+      }
+      button:hover,
+      summary:hover {
+        background: var(--panel-3);
+        border-color: #465169;
+      }
+      button:active,
+      summary:active {
+        transform: translateY(1px);
+      }
+
+      .example-menu {
+        position: relative;
+      }
+      .example-menu summary {
+        list-style: none;
+        user-select: none;
+      }
+      .example-menu summary::-webkit-details-marker {
+        display: none;
+      }
+      .example-list {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        z-index: 50;
+        min-width: 220px;
+        padding: 7px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: #111721;
+        box-shadow: 0 18px 34px rgba(0, 0, 0, 0.45);
+      }
+      .example-list button {
+        width: 100%;
+        display: block;
+        text-align: left;
+        border: 0;
+        background: transparent;
+        border-radius: 8px;
+        padding: 8px 9px;
+        color: var(--text);
+      }
+      .example-list button:hover {
+        background: var(--panel-2);
+      }
+
+      main {
+        min-height: 0;
+        display: grid;
+        gap: 1px;
+        background: var(--border);
+      }
+      main.resizing,
+      main.resizing * {
+        cursor: col-resize !important;
+        user-select: none !important;
+      }
+
+      .splitter {
+        min-width: 0;
+        background: linear-gradient(
+          90deg,
+          var(--border),
+          #3d485d,
+          var(--border)
+        );
+        cursor: col-resize;
+        position: relative;
+      }
+      .splitter::after {
+        content: "";
+        position: absolute;
+        inset: 42% 2px;
+        border-radius: 999px;
+        background: rgba(215, 222, 234, 0.34);
+      }
+      .splitter:hover,
+      .splitter.active {
+        background: linear-gradient(
+          90deg,
+          var(--border),
+          rgba(124, 219, 255, 0.55),
+          var(--border)
+        );
+      }
+
+      .pane {
+        min-width: 0;
+        min-height: 0;
+        background: var(--panel);
+        display: grid;
+        grid-template-rows: auto 1fr;
+        position: relative;
+      }
+      .pane-title {
+        height: 43px;
+        padding: 0 13px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        border-bottom: 1px solid var(--border);
+        background: rgba(31, 36, 48, 0.78);
+      }
+      .pane-title strong {
+        font-size: 12px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #aeb9cd;
+      }
+      .hint {
+        color: var(--muted);
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .editor-host {
+        min-width: 0;
+        min-height: 0;
+        overflow: hidden;
+      }
+      .CodeMirror {
+        width: 100%;
+        height: 100%;
+        font-family: var(--mono);
+        font-size: 13px;
+        line-height: 1.55;
+        background: #151922 !important;
+      }
+      .CodeMirror-gutters {
+        background: #151922 !important;
+        border-right: 1px solid var(--border) !important;
+      }
+      .CodeMirror-linenumber {
+        color: #536074 !important;
+      }
+
+      .CodeMirror-dialog {
+        position: absolute;
+        inset: auto 0 0 0;
+        z-index: 30;
+        border-top: 1px solid #3a455b;
+        border-bottom: 0;
+        background: #0f141d;
+        color: var(--text);
+        padding: 7px 10px;
+        font: 13px var(--mono);
+        box-shadow: 0 -10px 24px rgba(0, 0, 0, 0.32);
+      }
+      .CodeMirror-dialog-top {
+        top: auto;
+        bottom: 0;
+        border-bottom: 0;
+        border-top: 1px solid #3a455b;
+      }
+      .CodeMirror-dialog input {
+        width: 70%;
+        border: 0;
+        outline: none;
+        background: transparent;
+        color: var(--text);
+        font: 13px var(--mono);
+      }
+      .CodeMirror-dialog button {
+        margin-left: 8px;
+        padding: 3px 8px;
+        border-radius: 6px;
+      }
+
+      .cm-gbnf-rule {
+        color: #7cdbff;
+        font-weight: 650;
+      }
+      .cm-gbnf-op {
+        color: #ffcc66;
+      }
+      .cm-gbnf-string {
+        color: #a5e075;
+      }
+      .cm-gbnf-comment {
+        color: #66758d;
+        font-style: italic;
+      }
+      .cm-gbnf-class {
+        color: #ffb86c;
+      }
+      .cm-parse-error {
+        background: rgba(255, 107, 122, 0.18);
+        border-bottom: 2px solid rgba(255, 107, 122, 0.8);
+      }
+      .cm-parse-success {
+        background: rgba(84, 217, 144, 0.1);
+      }
+
+      .results {
+        min-height: 0;
+        overflow: auto;
+        padding: 14px;
+        background:
+          linear-gradient(
+            180deg,
+            rgba(124, 219, 255, 0.035),
+            transparent 180px
+          ),
+          var(--panel);
+      }
+      .card {
+        border: 1px solid var(--border);
+        background: rgba(31, 36, 48, 0.72);
+        border-radius: 14px;
+        margin-bottom: 12px;
+        overflow: hidden;
+      }
+      .card-head {
+        padding: 11px 12px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .card-head h2 {
+        margin: 0;
+        font-size: 13px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #bcc7d9;
+      }
+      .card-body {
+        padding: 12px;
+      }
+      .kv {
+        display: grid;
+        grid-template-columns: 88px 1fr;
+        gap: 8px 12px;
+        font-size: 13px;
+      }
+      .kv .k {
+        color: var(--muted);
+      }
+      .kv .v {
+        color: var(--text);
+        overflow-wrap: anywhere;
+      }
+      .mono {
+        font-family: var(--mono);
+      }
+      .ok-text {
+        color: var(--ok);
+      }
+      .bad-text {
+        color: var(--bad);
+      }
+      .warn-text {
+        color: var(--warn);
+      }
+      .expected-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 8px;
+      }
+      .chip {
+        font: 12px var(--mono);
+        color: #dbe7f7;
+        background: #111721;
+        border: 1px solid #344055;
+        border-radius: 999px;
+        padding: 4px 8px;
+      }
+      .tree {
+        font-family: var(--mono);
+        font-size: 12px;
+        line-height: 1.55;
+        white-space: pre-wrap;
+        color: #cfd8e8;
+      }
+      .tree .range {
+        color: var(--muted);
+      }
+      .tree .name {
+        color: var(--accent);
+      }
+      .tree .lit {
+        color: #a5e075;
+      }
+      .mini-note {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .vim-indicator {
+        color: var(--accent-2);
+        font: 12px var(--mono);
+        margin-top: 3px;
+        display: none;
+      }
+      .vim-indicator.active {
+        display: block;
+      }
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: none;
+        place-items: center;
+        padding: 22px;
+        background: rgba(5, 8, 13, 0.72);
+        backdrop-filter: blur(8px);
+      }
+      .modal-backdrop.open {
+        display: grid;
+      }
+      .modal {
+        width: min(460px, 100%);
+        border: 1px solid #3a455b;
+        border-radius: 18px;
+        background: #171c26;
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.56);
+        overflow: hidden;
+      }
+      .modal h2 {
+        margin: 0;
+        padding: 16px 18px;
+        border-bottom: 1px solid var(--border);
+        font-size: 16px;
+      }
+      .modal p {
+        margin: 0;
+        padding: 16px 18px;
+        color: #b7c2d6;
+        line-height: 1.55;
+        font-size: 14px;
+      }
+      .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 14px 18px 18px;
+      }
+      .primary-button {
+        border-color: rgba(181, 140, 255, 0.45);
+        background: rgba(181, 140, 255, 0.18);
+      }
+
+      @media (max-width: 1120px) {
+        body {
+          overflow: auto;
+        }
+        .app {
+          min-height: 100vh;
+          height: auto;
+        }
+        main {
+          grid-template-columns: 1fr !important;
+          grid-template-rows: 440px 440px minmax(360px, auto);
+        }
+        .splitter {
+          display: none;
+        }
+        header {
+          position: sticky;
+          top: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header>
+        <div class="brand">
+          <button
+            id="vimToggle"
+            class="logo"
+            type="button"
+            title="Double-click to toggle Vim mode"
+            aria-label="Double-click to toggle Vim mode"
+          >
+            ∴
+          </button>
+          <div>
+            <h1>GBNF Grammar Debugger</h1>
+            <div class="subtitle">
+              Real-time GGML BNF matching for Triton grammar experiments
+            </div>
+          </div>
         </div>
-      </div>
 
-      <div class="toolbar">
-        <div id="vimMode" class="vim-indicator">Vim mode active</div>
-        <details id="exampleMenu" class="example-menu">
-          <summary title="Open examples, then choose one to replace both editors">Examples ▾</summary>
-          <div id="exampleList" class="example-list" role="menu"></div>
-        </details>
-        <label class="hint" for="rootRule">Start rule</label>
-        <select id="rootRule" title="Rule used as the grammar entrypoint"></select>
-      </div>
-      <span id="status" class="status-pill warn"><span class="dot"></span><span>Waiting…</span></span>
-    </header>
-
-    <main>
-      <section class="pane">
-        <div class="pane-title">
-          <strong>GBNF Grammar</strong>
-          <span class="hint">Rules: <span id="ruleCount">0</span></span>
+        <div class="toolbar">
+          <div id="vimMode" class="vim-indicator">Vim mode active</div>
+          <details id="exampleMenu" class="example-menu">
+            <summary
+              title="Open examples, then choose one to replace both editors"
+            >
+              Examples ▾
+            </summary>
+            <div id="exampleList" class="example-list" role="menu"></div>
+          </details>
+          <label class="hint" for="rootRule">Start rule</label>
+          <select
+            id="rootRule"
+            title="Rule used as the grammar entrypoint"
+          ></select>
         </div>
-        <div id="grammar" class="editor-host"></div>
-      </section>
+        <span id="status" class="status-pill warn"
+          ><span class="dot"></span><span>Waiting…</span></span
+        >
+      </header>
 
-      <div id="editorSplitter" class="splitter" role="separator" aria-label="Resize grammar and test input panes" aria-orientation="vertical"></div>
+      <main id="mainLayout">
+        <section class="pane" id="grammarPane">
+          <div class="pane-title">
+            <strong>GBNF Grammar</strong>
+            <span class="hint">Rules: <span id="ruleCount">0</span></span>
+          </div>
+          <div id="grammar" class="editor-host"></div>
+        </section>
 
-      <section class="pane">
-        <div class="pane-title">
-          <strong>Test Input / Triton Code</strong>
-          <span class="hint">Full input must match the selected start rule</span>
+        <div
+          id="editorSplitter"
+          class="splitter"
+          role="separator"
+          aria-label="Resize grammar and test input panes"
+          aria-orientation="vertical"
+        ></div>
+
+        <section class="pane" id="inputPane">
+          <div class="pane-title">
+            <strong>Test Input / Triton Code</strong>
+            <span class="hint"
+              >Full input must match the selected start rule</span
+            >
+          </div>
+          <div id="input" class="editor-host"></div>
+        </section>
+
+        <aside class="pane" id="diagnosticsPane">
+          <div class="pane-title">
+            <strong>Match Diagnostics</strong>
+            <span id="elapsed" class="hint">—</span>
+          </div>
+          <div id="results" class="results"></div>
+        </aside>
+      </main>
+    </div>
+
+    <div
+      id="vimConfirmModal"
+      class="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="vimConfirmTitle"
+    >
+      <div class="modal">
+        <h2 id="vimConfirmTitle">Enable Vim mode?</h2>
+        <p>
+          Vim mode changes editor keyboard behavior and enables commands like
+          <span class="mono">:</span>, search with
+          <span class="mono">/</span>/<span class="mono">?</span>, and
+          <span class="mono">gcc</span>/<span class="mono">gc{motion}</span>
+          commenting. You can double-click the logo again to turn it off.
+        </p>
+        <div class="modal-actions">
+          <button id="vimConfirmCancel" type="button">Cancel</button>
+          <button id="vimConfirmEnable" class="primary-button" type="button">
+            Enable Vim mode
+          </button>
         </div>
-        <div id="input" class="editor-host"></div>
-      </section>
-
-      <aside class="pane">
-        <div class="pane-title">
-          <strong>Match Diagnostics</strong>
-          <span id="elapsed" class="hint">—</span>
-        </div>
-        <div id="results" class="results"></div>
-      </aside>
-    </main>
-  </div>
-
-  <div id="vimConfirmModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="vimConfirmTitle">
-    <div class="modal">
-      <h2 id="vimConfirmTitle">Enable Vim mode?</h2>
-      <p>
-        Vim mode changes editor keyboard behavior and enables commands like <span class="mono">:</span>, search with
-        <span class="mono">/</span>/<span class="mono">?</span>, and <span class="mono">gcc</span>/<span class="mono">gc{motion}</span>
-        commenting. You can double-click the logo again to turn it off.
-      </p>
-      <div class="modal-actions">
-        <button id="vimConfirmCancel" type="button">Cancel</button>
-        <button id="vimConfirmEnable" class="primary-button" type="button">Enable Vim mode</button>
       </div>
     </div>
-  </div>
 
-  <script>
-    "use strict";
+    <script>
+      "use strict";
 
-    /***************************************************************************
-     * Minimal GBNF debugger engine
-     * ------------------------------------------------------------------------
-     * This file intentionally implements the grammar parser and matcher here so
-     * the page remains useful from file:// with no build step. The supported GBNF
-     * subset is deliberately the portable overlap between llama.cpp/GGML GBNF and
-     * XGrammar EBNF, so a grammar accepted here should be safe to take to both
-     * runtimes:
-     *
-     *   rule-name ::= expression
-     *   expression ::= sequence ("|" sequence)*
-     *   atoms: "literal", [char-class], rule-ref, (group)
-     *   postfix: ?, *, +, {n}, {n,}, {n,m}
-     *   portable escapes: \n, \r, \t, \\, \", \xNN, \uNNNN, \UNNNNNNNN
-     *
-     * The validator rejects known non-portable grammar: single-quoted strings,
-     * dot wildcards, dot rule names, digit-start rule names, left
-     * recursion, and bounded repeat counts beyond llama.cpp's practical limit.
-     *
-     * Whitespace in the grammar is ignored; whitespace in the input is matched
-     * only when your grammar says so. This is deliberate for code grammars where
-     * explicit ws/newline rules are usually needed.
-     ***************************************************************************/
+      // ============================================================================
+      // 1. CONFIGURATION & STATE
+      // ============================================================================
 
-    const RULE_NAME_PATTERN = "[A-Za-z_][A-Za-z0-9_-]*";
-    const RULE_DECLARATION_RE = new RegExp(`^\\s*(${RULE_NAME_PATTERN})\\s*::=\\s*(.*)$`);
-    const RULE_NAME_RE = new RegExp(`^${RULE_NAME_PATTERN}`);
-    const MAX_PORTABLE_REPEAT = 2000;
-
-    const EXAMPLES = [
-      {
-        name: "Hello literal",
-        grammar: String.raw`# Smallest useful sanity check.
-root ::= "hello" ws "gbnf"
-ws ::= [ \t]+`,
-        input: "hello gbnf",
-      },
-      {
-        name: "Identifier assignment",
-        grammar: String.raw`# A single Python/Triton-style assignment.
-root ::= identifier ws? "=" ws? expr
-expr ::= number | identifier
-identifier ::= [A-Za-z_][A-Za-z0-9_]*
-number ::= [0-9]+ ("." [0-9]+)?
-ws ::= [ \t]+`,
-        input: "block_size = 128",
-      },
-      {
-        name: "Tiny expression",
-        grammar: String.raw`# Simple non-recursive expression grammar.
-root ::= term (ws? operator ws? term)*
-term ::= number | identifier
-operator ::= "+" | "-" | "*" | "/"
-identifier ::= [A-Za-z_][A-Za-z0-9_]*
-number ::= [0-9]+ ("." [0-9]+)?
-ws ::= [ \t]+`,
-        input: "x + y * 4",
-      },
-      {
-        name: "Mini Triton function",
-        grammar: String.raw`# Deliberately tiny Triton-ish function shape.
-root ::= decorator newline signature newline indent return_stmt
-decorator ::= "@triton.jit"
-signature ::= "def" ws identifier "(" identifier ")" ":"
-return_stmt ::= "return" ws identifier newline?
-identifier ::= [A-Za-z_][A-Za-z0-9_]*
-ws ::= [ \t]+
-newline ::= "\n"
-indent ::= "    "`,
-        input: `@triton.jit
-def identity(x):
-    return x
-`,
-      },
-    ];
-
-    // A compact syntax highlighter for GBNF. It is not involved in parsing.
-    CodeMirror.defineSimpleMode("gbnf", {
-      start: [
-        { regex: /#.*/, token: "gbnf-comment" },
-        { regex: /::=|[|()*+?,{}]/, token: "gbnf-op" },
-        { regex: /"(?:\\.|[^"\\])*"/, token: "gbnf-string" },
-        { regex: /\[(?:\\.|[^\]\\])+\]/, token: "gbnf-class" },
-        { regex: /^\s*[A-Za-z_][A-Za-z0-9_-]*(?=\s*::=)/, token: "gbnf-rule" },
-        { regex: /[A-Za-z_][A-Za-z0-9_-]*/, token: null },
-        { regex: /\s+/, token: null },
-      ]
-    });
-
-    const HASH_COMMENT_OPTIONS = {
-      lineComment: "#",
-      padding: " ",
-      indent: true,
-      commentBlankLines: false,
-    };
-
-    const STORAGE_KEYS = {
-      vimEnabled: "gbnfDebugger.vimEnabled",
-      vimConfirmed: "gbnfDebugger.vimConfirmed",
-      grammarSource: "gbnfDebugger.grammarSource",
-      inputSource: "gbnfDebugger.inputSource",
-      editorSplitRatio: "gbnfDebugger.editorSplitRatio",
-    };
-
-    const initialVimEnabled = getStoredBoolean(STORAGE_KEYS.vimEnabled, false);
-    const initialGrammarSource = getStoredString(STORAGE_KEYS.grammarSource, EXAMPLES[0].grammar);
-    const initialInputSource = getStoredString(STORAGE_KEYS.inputSource, EXAMPLES[0].input);
-
-    // CodeMirror's Vim layer exposes first-class extension hooks. Use a true
-    // Vim operator here so `gc` composes with counts and motions (`gcap`,
-    // `gc3j`, `2gcc`, etc.). Because `gc` is a multi-key operator,
-    // CodeMirror's Vim keymap also treats `gcc` as "repeat the same operator"
-    // and expands it linewise, just like `dd`/`yy`.
-    if (CodeMirror.Vim) {
-      CodeMirror.Vim.defineOperator("toggleHashComment", (cm, _operatorArgs, ranges, oldAnchor) => {
-        toggleHashComment(cm, ranges);
-        cm.focus();
-        return oldAnchor;
-      });
-      CodeMirror.Vim.mapCommand("gc", "operator", "toggleHashComment", {}, { context: "normal" });
-      CodeMirror.Vim.mapCommand("gc", "operator", "toggleHashComment", {}, { context: "visual" });
-
-      CodeMirror.Vim.defineAction("clipboardYank", cm => {
-        clipboardYank(cm);
-      });
-      CodeMirror.Vim.defineAction("clipboardPaste", cm => {
-        clipboardPaste(cm, { after: true });
-      });
-      CodeMirror.Vim.mapCommand("<Space>y", "action", "clipboardYank", {}, { context: "visual" });
-      CodeMirror.Vim.mapCommand("<Space>p", "action", "clipboardPaste", {}, { context: "normal" });
-    }
-
-    const EDITOR_BASE_OPTIONS = {
-      theme: "material-darker",
-      keyMap: initialVimEnabled ? "vim" : "default",
-      lineNumbers: true,
-      lineWrapping: true,
-      tabSize: 4,
-      indentUnit: 4,
-      indentWithTabs: false,
-      extraKeys: {
-        Tab: cm => cm.execCommand("insertSoftTab"),
-        "Shift-Tab": cm => cm.execCommand("indentLess"),
-      },
-    };
-
-    const grammarEditor = CodeMirror(document.getElementById("grammar"), {
-      ...EDITOR_BASE_OPTIONS,
-      value: initialGrammarSource,
-      mode: "gbnf",
-      autofocus: true,
-    });
-
-    const inputEditor = CodeMirror(document.getElementById("input"), {
-      ...EDITOR_BASE_OPTIONS,
-      value: initialInputSource,
-      mode: "javascript",
-    });
-
-    const VIM_CLIPBOARD_KEYMAP = {
-      "Ctrl-C": cm => {
-        if (vimEnabled && isVimVisualMode(cm)) {
-          clipboardYank(cm);
-          return true;
-        }
-        return CodeMirror.Pass;
-      },
-      "Cmd-C": cm => {
-        if (vimEnabled && isVimVisualMode(cm)) {
-          clipboardYank(cm);
-          return true;
-        }
-        return CodeMirror.Pass;
-      },
-      "Ctrl-V": cm => {
-        if (vimEnabled && isVimNormalMode(cm)) {
-          clipboardPaste(cm, { after: true });
-          return true;
-        }
-        return CodeMirror.Pass;
-      },
-      "Cmd-V": cm => {
-        if (vimEnabled && isVimNormalMode(cm)) {
-          clipboardPaste(cm, { after: true });
-          return true;
-        }
-        return CodeMirror.Pass;
-      },
-    };
-    grammarEditor.addKeyMap(VIM_CLIPBOARD_KEYMAP);
-    inputEditor.addKeyMap(VIM_CLIPBOARD_KEYMAP);
-
-    const mainEl = document.querySelector("main");
-    const editorSplitter = document.getElementById("editorSplitter");
-    const grammarPane = document.getElementById("grammar").closest(".pane");
-    const inputPane = document.getElementById("input").closest(".pane");
-    const diagnosticsPane = document.querySelector("aside.pane");
-
-    const vimToggle = document.getElementById("vimToggle");
-    const vimIndicator = document.getElementById("vimMode");
-    const vimConfirmModal = document.getElementById("vimConfirmModal");
-    const vimConfirmCancel = document.getElementById("vimConfirmCancel");
-    const vimConfirmEnable = document.getElementById("vimConfirmEnable");
-    const exampleMenu = document.getElementById("exampleMenu");
-    const exampleMenuSummary = exampleMenu.querySelector("summary");
-    const exampleList = document.getElementById("exampleList");
-    const rootSelect = document.getElementById("rootRule");
-    const statusEl = document.getElementById("status");
-    const resultsEl = document.getElementById("results");
-    const elapsedEl = document.getElementById("elapsed");
-    const ruleCountEl = document.getElementById("ruleCount");
-    let activeMarks = [];
-    let debounceTimer = 0;
-    let previousRuleNames = [];
-    let vimEnabled = initialVimEnabled;
-    let currentExampleIndex = 0;
-
-    EXAMPLES.forEach((example, index) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.setAttribute("role", "menuitem");
-      button.textContent = example.name;
-      button.addEventListener("click", () => loadExample(index));
-      exampleList.appendChild(button);
-    });
-
-    updateExampleSummary();
-    applyVimMode(vimEnabled);
-
-    vimToggle.addEventListener("dblclick", () => {
-      if (vimEnabled) {
-        setVimMode(false);
-      } else if (getStoredBoolean(STORAGE_KEYS.vimConfirmed, false)) {
-        setVimMode(true);
-      } else {
-        openVimConfirmModal();
-      }
-    });
-
-    vimConfirmCancel.addEventListener("click", closeVimConfirmModal);
-    vimConfirmEnable.addEventListener("click", () => {
-      setStoredBoolean(STORAGE_KEYS.vimConfirmed, true);
-      setVimMode(true);
-      closeVimConfirmModal();
-    });
-
-    vimConfirmModal.addEventListener("click", event => {
-      if (event.target === vimConfirmModal) closeVimConfirmModal();
-    });
-
-    document.addEventListener("keydown", event => {
-      if (event.key === "Escape" && vimConfirmModal.classList.contains("open")) {
-        closeVimConfirmModal();
-      }
-    });
-    installEditorSplitter();
-
-    grammarEditor.on("change", () => {
-      setStoredString(STORAGE_KEYS.grammarSource, grammarEditor.getValue());
-      scheduleRun();
-    });
-    inputEditor.on("change", () => {
-      setStoredString(STORAGE_KEYS.inputSource, inputEditor.getValue());
-      scheduleRun();
-    });
-    rootSelect.addEventListener("change", runDebugger);
-
-    function loadExample(index) {
-      const example = EXAMPLES[index] || EXAMPLES[0];
-      currentExampleIndex = EXAMPLES[index] ? index : 0;
-      grammarEditor.setValue(example.grammar);
-      inputEditor.setValue(example.input);
-      setStoredString(STORAGE_KEYS.grammarSource, example.grammar);
-      setStoredString(STORAGE_KEYS.inputSource, example.input);
-      exampleMenu.open = false;
-      updateExampleSummary();
-      scheduleRun();
-    }
-
-    function updateExampleSummary() {
-      exampleMenuSummary.textContent = `Examples: ${EXAMPLES[currentExampleIndex].name} ▾`;
-    }
-
-    function setVimMode(enabled) {
-      vimEnabled = enabled;
-      setStoredBoolean(STORAGE_KEYS.vimEnabled, enabled);
-      applyVimMode(enabled);
-    }
-
-    function applyVimMode(enabled) {
-      const keyMap = enabled ? "vim" : "default";
-      grammarEditor.setOption("keyMap", keyMap);
-      inputEditor.setOption("keyMap", keyMap);
-      vimToggle.classList.toggle("vim-active", enabled);
-      vimToggle.setAttribute("aria-pressed", String(enabled));
-      vimIndicator.classList.toggle("active", enabled);
-      vimToggle.title = enabled ? "Vim mode active — double-click to turn off" : "Double-click to toggle Vim mode";
-    }
-
-    function openVimConfirmModal() {
-      vimConfirmModal.classList.add("open");
-      vimConfirmEnable.focus();
-    }
-
-    function closeVimConfirmModal() {
-      vimConfirmModal.classList.remove("open");
-      vimToggle.focus();
-    }
-
-    function getStoredBoolean(key, fallback) {
-      try {
-        const value = localStorage.getItem(key);
-        if (value === null) return fallback;
-        return value === "true";
-      } catch (_error) {
-        return fallback;
-      }
-    }
-
-    function getStoredString(key, fallback) {
-      try {
-        const value = localStorage.getItem(key);
-        return value === null ? fallback : value;
-      } catch (_error) {
-        return fallback;
-      }
-    }
-
-    function setStoredBoolean(key, value) {
-      try {
-        localStorage.setItem(key, String(value));
-      } catch (_error) {
-        // localStorage may be unavailable in hardened file:// contexts. The UI
-        // still works for the current page load when persistence fails.
-      }
-    }
-
-    function setStoredString(key, value) {
-      try {
-        localStorage.setItem(key, value);
-      } catch (_error) {
-        // localStorage may be unavailable in hardened file:// contexts. The UI
-        // still works for the current page load when persistence fails.
-      }
-    }
-
-    function getStoredNumber(key, fallback) {
-      try {
-        const storedValue = localStorage.getItem(key);
-        if (storedValue === null) return fallback;
-        const value = Number(storedValue);
-        return Number.isFinite(value) ? value : fallback;
-      } catch (_error) {
-        return fallback;
-      }
-    }
-
-    function setStoredNumber(key, value) {
-      try {
-        localStorage.setItem(key, String(value));
-      } catch (_error) {
-        // localStorage may be unavailable in hardened file:// contexts. The UI
-        // still works for the current page load when persistence fails.
-      }
-    }
-
-    function scheduleRun() {
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(runDebugger, 160);
-    }
-
-    function setStatus(kind, text) {
-      statusEl.className = `status-pill ${kind}`;
-      statusEl.querySelector("span:last-child").textContent = text;
-    }
-
-    function clipboardYank(cm) {
-      if (!CodeMirror.Vim || !cm.somethingSelected || !cm.somethingSelected()) return;
-
-      const vim = cm.state.vim || {};
-      const text = cm.getSelection();
-      if (!text) return;
-
-      const registers = CodeMirror.Vim.getRegisterController();
-      registers.pushText(null, "yank", text, !!vim.visualLine, !!vim.visualBlock);
-      writeSystemClipboard(text);
-      CodeMirror.Vim.exitVisualMode(cm);
-      cm.focus();
-    }
-
-    function clipboardPaste(cm, { after = true } = {}) {
-      if (!CodeMirror.Vim) return;
-
-      readSystemClipboard().then(text => {
-        if (text) {
-          CodeMirror.Vim.getRegisterController().getRegister('"').setText(text, text.endsWith("\n"));
-        }
-        CodeMirror.Vim.handleKey(cm, after ? "p" : "P");
-        cm.focus();
-      });
-    }
-
-    function isVimVisualMode(cm) {
-      const vim = cm.state && cm.state.vim;
-      return !!(vim && vim.visualMode);
-    }
-
-    function isVimNormalMode(cm) {
-      const vim = cm.state && cm.state.vim;
-      return !!(vim && !vim.insertMode && !vim.visualMode);
-    }
-
-    function writeSystemClipboard(text) {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).catch(() => {});
-      }
-    }
-
-    function readSystemClipboard() {
-      if (navigator.clipboard && navigator.clipboard.readText) {
-        return navigator.clipboard.readText().catch(() => "");
-      }
-      return Promise.resolve("");
-    }
-
-    function installEditorSplitter() {
-      if (!mainEl || !editorSplitter || !grammarPane || !inputPane || !diagnosticsPane) return;
-
-      let drag = null;
-      const minPaneWidth = 260;
-      const minDiagnosticsWidth = 320;
-      const defaultEditorSplitRatio = 0.98 / (0.98 + 1.12);
-      let currentRatio = getStoredNumber(STORAGE_KEYS.editorSplitRatio, defaultEditorSplitRatio);
-
-      const normalizeSplitRatio = ratio => {
-        return Number.isFinite(ratio) ? clamp(ratio, 0, 1) : defaultEditorSplitRatio;
+      const CONFIG = {
+        MAX_PORTABLE_REPEAT: 2000,
+        RULE_NAME_PATTERN: "[A-Za-z_][A-Za-z0-9_-]*",
+        HASH_COMMENT_OPTIONS: {
+          lineComment: "#",
+          padding: " ",
+          indent: true,
+          commentBlankLines: false,
+        },
+        STORAGE_KEYS: {
+          vimEnabled: "gbnfDebugger.vimEnabled",
+          vimConfirmed: "gbnfDebugger.vimConfirmed",
+          grammarSource: "gbnfDebugger.grammarSource",
+          inputSource: "gbnfDebugger.inputSource",
+          editorSplitRatio: "gbnfDebugger.editorSplitRatio",
+        },
       };
 
-      const getEditorTotalWidth = () => {
-        const mainRect = mainEl.getBoundingClientRect();
-        const diagnosticsRect = diagnosticsPane.getBoundingClientRect();
-        const splitterWidth = editorSplitter.getBoundingClientRect().width || 7;
-        const columnGap = parseFloat(getComputedStyle(mainEl).columnGap) || 0;
-        const contentWidth = Math.max(0, mainRect.width - splitterWidth - columnGap * 3);
-        const diagnosticsWidth = clamp(
-          diagnosticsRect.width || minDiagnosticsWidth,
-          minDiagnosticsWidth,
-          contentWidth - minPaneWidth * 2,
-        );
-        return Math.max(minPaneWidth * 2, contentWidth - diagnosticsWidth);
-      };
+      const EXAMPLES = [
+        {
+          name: "Hello literal",
+          grammar: `# Smallest useful sanity check.\nroot ::= "hello" ws "gbnf"\nws ::= [ \\t]+`,
+          input: "hello gbnf",
+        },
+        {
+          name: "Identifier assignment",
+          grammar: `# A single Python/Triton-style assignment.\nroot ::= identifier ws? "=" ws? expr\nexpr ::= number | identifier\nidentifier ::= [A-Za-z_][A-Za-z0-9_]*\nnumber ::= [0-9]+ ("." [0-9]+)?\nws ::= [ \\t]+`,
+          input: "block_size = 128",
+        },
+        {
+          name: "Tiny expression",
+          grammar: `# Simple non-recursive expression grammar.\nroot ::= term (ws? operator ws? term)*\nterm ::= number | identifier\noperator ::= "+" | "-" | "*" | "/"\nidentifier ::= [A-Za-z_][A-Za-z0-9_]*\nnumber ::= [0-9]+ ("." [0-9]+)?\nws ::= [ \\t]+`,
+          input: "x + y * 4",
+        },
+        {
+          name: "Mini Triton function",
+          grammar: `# Deliberately tiny Triton-ish function shape.\nroot ::= decorator newline signature newline indent return_stmt\ndecorator ::= "@triton.jit"\nsignature ::= "def" ws identifier "(" identifier ")" ":"\nreturn_stmt ::= "return" ws identifier newline?\nidentifier ::= [A-Za-z_][A-Za-z0-9_]*\nws ::= [ \\t]+\nnewline ::= "\\n"\nindent ::= "    "`,
+          input: `@triton.jit\ndef identity(x):\n    return x\n`,
+        },
+      ];
 
-      const applySplit = ratio => {
-        currentRatio = normalizeSplitRatio(ratio);
-        const total = getEditorTotalWidth();
-        const left = Math.round(clamp(total * currentRatio, minPaneWidth, total - minPaneWidth));
-        const right = Math.round(total - left);
-        mainEl.style.gridTemplateColumns = `${left}px 7px ${right}px minmax(320px, 0.9fr)`;
-        grammarEditor.refresh();
-        inputEditor.refresh();
-      };
+      // ============================================================================
+      // 2. UTILITIES & STORAGE
+      // ============================================================================
 
-      requestAnimationFrame(() => applySplit(currentRatio));
-
-      editorSplitter.addEventListener("pointerdown", event => {
-        if (window.matchMedia("(max-width: 1120px)").matches) return;
-        const grammarRect = grammarPane.getBoundingClientRect();
-        drag = {
-          leftEdge: grammarRect.left,
-          total: getEditorTotalWidth(),
-        };
-        editorSplitter.setPointerCapture(event.pointerId);
-        editorSplitter.classList.add("active");
-        mainEl.classList.add("resizing");
-        event.preventDefault();
-      });
-
-      editorSplitter.addEventListener("pointermove", event => {
-        if (!drag) return;
-        const left = clamp(event.clientX - drag.leftEdge, minPaneWidth, drag.total - minPaneWidth);
-        const ratio = left / drag.total;
-        applySplit(ratio);
-        setStoredNumber(STORAGE_KEYS.editorSplitRatio, currentRatio);
-      });
-
-      const stopDrag = event => {
-        if (!drag) return;
-        drag = null;
-        editorSplitter.releasePointerCapture?.(event.pointerId);
-        editorSplitter.classList.remove("active");
-        mainEl.classList.remove("resizing");
-        grammarEditor.refresh();
-        inputEditor.refresh();
-      };
-      editorSplitter.addEventListener("pointerup", stopDrag);
-      editorSplitter.addEventListener("pointercancel", stopDrag);
-      window.addEventListener("resize", () => {
-        if (!window.matchMedia("(max-width: 1120px)").matches) applySplit(currentRatio);
-      });
-    }
-
-    function clamp(value, min, max) {
-      return Math.max(min, Math.min(max, value));
-    }
-
-    function toggleHashComment(cm, ranges = cm.listSelections()) {
-      cm.operation(() => {
-        for (const range of normalizedLineRanges(cm, ranges)) {
-          const from = CodeMirror.Pos(range.fromLine, 0);
-          const to = CodeMirror.Pos(range.toLine, cm.getLine(range.toLine).length);
-          if (!cm.uncomment(from, to, HASH_COMMENT_OPTIONS)) {
-            cm.lineComment(from, to, HASH_COMMENT_OPTIONS);
+      const Storage = {
+        getBool: (key, fallback) => {
+          try {
+            const val = localStorage.getItem(key);
+            return val === null ? fallback : val === "true";
+          } catch (e) {
+            return fallback;
           }
-        }
-      });
-    }
+        },
+        setBool: (key, value) => {
+          try {
+            localStorage.setItem(key, String(value));
+          } catch (e) {}
+        },
+        getString: (key, fallback) => {
+          try {
+            const val = localStorage.getItem(key);
+            return val === null ? fallback : val;
+          } catch (e) {
+            return fallback;
+          }
+        },
+        setString: (key, value) => {
+          try {
+            localStorage.setItem(key, value);
+          } catch (e) {}
+        },
+        getNumber: (key, fallback) => {
+          try {
+            const val = localStorage.getItem(key);
+            return val === null || isNaN(Number(val)) ? fallback : Number(val);
+          } catch (e) {
+            return fallback;
+          }
+        },
+      };
 
-    function normalizedLineRanges(cm, ranges) {
-      const lineRanges = ranges.map(range => {
-        let from = CodeMirror.Pos(
-          Math.min(range.anchor.line, range.head.line),
-          range.anchor.line <= range.head.line ? range.anchor.ch : range.head.ch,
-        );
-        let to = CodeMirror.Pos(
-          Math.max(range.anchor.line, range.head.line),
-          range.anchor.line <= range.head.line ? range.head.ch : range.anchor.ch,
-        );
+      const Utils = {
+        clamp: (value, min, max) => Math.max(min, Math.min(max, value)),
+        htmlEscape: (value) =>
+          String(value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;"),
+        quoteForDisplay: (value) =>
+          JSON.stringify(value).replace(/^"|"$/g, (match) => match),
+        preview: (text) => {
+          const escaped = text.replace(/\n/g, "\\n").replace(/\t/g, "\\t");
+          return escaped.length > 42 ? escaped.slice(0, 39) + "…" : escaped;
+        },
+      };
 
-        // A visual selection ending in column zero should behave like Vim and
-        // not unexpectedly include the following untouched line.
-        if ((from.line !== to.line || from.ch !== to.ch) && to.ch === 0 && to.line > from.line) {
-          to = CodeMirror.Pos(to.line - 1, cm.getLine(to.line - 1).length);
-        }
+      // ============================================================================
+      // 3. CLIPBOARD & EDITOR API
+      // ============================================================================
 
-        return { fromLine: from.line, toLine: to.line };
-      }).sort((a, b) => a.fromLine - b.fromLine || a.toLine - b.toLine);
+      const Clipboard = {
+        yank: (cm) => {
+          if (!CodeMirror.Vim || !cm.somethingSelected()) return;
+          const vim = cm.state.vim || {};
+          const text = cm.getSelection();
+          if (!text) return;
 
-      // Merge overlapping multi-cursor selections so each physical line is
-      // toggled at most once.
-      const merged = [];
-      for (const range of lineRanges) {
-        const last = merged[merged.length - 1];
-        if (last && range.fromLine <= last.toLine + 1) {
-          last.toLine = Math.max(last.toLine, range.toLine);
-        } else {
-          merged.push({ ...range });
-        }
-      }
-      return merged;
-    }
-
-    function clearMarks() {
-      activeMarks.forEach(mark => mark.clear());
-      activeMarks = [];
-    }
-
-    function markInputRange(fromIndex, toIndex, className) {
-      const textLength = inputEditor.getValue().length;
-      const safeFrom = Math.max(0, Math.min(fromIndex, textLength));
-      const safeTo = Math.max(safeFrom, Math.min(toIndex, textLength));
-      const from = inputEditor.posFromIndex(safeFrom);
-      const to = inputEditor.posFromIndex(safeTo || Math.min(safeFrom + 1, textLength));
-      activeMarks.push(inputEditor.markText(from, to, { className }));
-    }
-
-    function runDebugger() {
-      const started = performance.now();
-      clearMarks();
-
-      try {
-        const grammarSource = grammarEditor.getValue();
-        const grammar = parseGrammar(grammarSource);
-        refreshRootSelector(grammar.ruleOrder);
-
-        const selectedRoot = rootSelect.value || grammar.defaultRoot;
-        ruleCountEl.textContent = String(grammar.ruleOrder.length);
-
-
-        if (!selectedRoot || !grammar.rules[selectedRoot]) {
-          renderGrammarError("No usable start rule found.", grammar.ruleOrder);
-          setStatus("bad", "Grammar error");
-          return;
-        }
-
-        const matcher = new Matcher(grammar.rules, selectedRoot, inputEditor.getValue());
-        const result = matcher.match();
-        elapsedEl.textContent = `${(performance.now() - started).toFixed(1)} ms`;
-
-        if (result.ok) {
-          setStatus("ok", `Match: ${selectedRoot}`);
-          markInputRange(0, inputEditor.getValue().length, "cm-parse-success");
-          renderSuccess(result, selectedRoot, grammar);
-        } else {
-          setStatus(result.limited ? "warn" : "bad", result.limited ? "Analysis limit" : "No match");
-          const failEnd = Math.min(result.error.index + 1, inputEditor.getValue().length);
-          markInputRange(result.error.index, failEnd, "cm-parse-error");
-          renderFailure(result, selectedRoot, grammar);
-        }
-      } catch (error) {
-        elapsedEl.textContent = `${(performance.now() - started).toFixed(1)} ms`;
-        setStatus("bad", "Grammar error");
-        renderGrammarError(error.message, []);
-      }
-    }
-
-    function refreshRootSelector(ruleNames) {
-      const same = ruleNames.length === previousRuleNames.length && ruleNames.every((name, i) => name === previousRuleNames[i]);
-      if (same) return;
-
-      const previous = rootSelect.value;
-      rootSelect.innerHTML = "";
-      for (const name of ruleNames) {
-        const option = document.createElement("option");
-        option.value = name;
-        option.textContent = name;
-        rootSelect.appendChild(option);
-      }
-
-      if (ruleNames.includes(previous)) rootSelect.value = previous;
-      else if (ruleNames.includes("root")) rootSelect.value = "root";
-      else if (ruleNames[0]) rootSelect.value = ruleNames[0];
-      previousRuleNames = ruleNames.slice();
-    }
-
-    /** Convert a GBNF document into rule ASTs keyed by rule name. */
-    function parseGrammar(source) {
-      const clean = stripComments(source);
-      const lines = clean.split(/\r?\n/);
-      const chunks = [];
-      let current = null;
-
-      for (const rawLine of lines) {
-        const line = rawLine.trimEnd();
-        const start = line.match(RULE_DECLARATION_RE);
-        if (start) {
-          if (current) chunks.push(current);
-          current = { name: start[1], expr: start[2] };
-        } else if (line.includes("::=")) {
-          const name = line.match(/^\s*([^\s:]+)/)?.[1] || "";
-          throw new Error(
-            `Rule name "${name}" is not portable. Use ${RULE_NAME_PATTERN}: letter or '_' first, then letters, digits, '_' or '-' only.`,
+          const registers = CodeMirror.Vim.getRegisterController();
+          registers.pushText(
+            null,
+            "yank",
+            text,
+            !!vim.visualLine,
+            !!vim.visualBlock,
           );
-        } else if (current && line.trim()) {
-          // Continuation lines are appended with a space so multi-line sequences
-          // and alternatives keep working without requiring backslash markers.
-          current.expr += " " + line.trim();
+          // Explicitly set unnamed register so standard Vim p works flawlessly
+          registers
+            .getRegister('"')
+            .setText(text, !!vim.visualLine, !!vim.visualBlock);
+
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard
+              .writeText(text)
+              .catch(() => console.warn("System clipboard blocked"));
+          }
+          CodeMirror.Vim.exitVisualMode(cm);
+          cm.focus();
+        },
+        paste: async (cm, { after = true } = {}) => {
+          if (!CodeMirror.Vim) return;
+          try {
+            if (navigator.clipboard && navigator.clipboard.readText) {
+              const text = await navigator.clipboard.readText();
+              if (text) {
+                CodeMirror.Vim.getRegisterController()
+                  .getRegister('"')
+                  .setText(text, text.endsWith("\n"));
+              }
+            }
+          } catch (e) {
+            // Fails silently; falls back to whatever is in Vim's internal register
+          }
+          CodeMirror.Vim.handleKey(cm, after ? "p" : "P");
+          cm.focus();
+        },
+      };
+
+      // CM5 Mode Definition
+      CodeMirror.defineSimpleMode("gbnf", {
+        start: [
+          { regex: /#.*/, token: "gbnf-comment" },
+          { regex: /::=|[|()*+?,{}]/, token: "gbnf-op" },
+          { regex: /"(?:\\.|[^"\\])*"/, token: "gbnf-string" },
+          { regex: /\[(?:\\.|[^\]\\])+\]/, token: "gbnf-class" },
+          {
+            regex: /^\s*[A-Za-z_][A-Za-z0-9_-]*(?=\s*::=)/,
+            token: "gbnf-rule",
+          },
+          { regex: /[A-Za-z_][A-Za-z0-9_-]*/, token: null },
+          { regex: /\s+/, token: null },
+        ],
+      });
+
+      const EditorCommands = {
+        toggleHashComment: (cm, ranges = cm.listSelections()) => {
+          cm.operation(() => {
+            const merged = EditorCommands.normalizedLineRanges(cm, ranges);
+            for (const range of merged) {
+              const from = CodeMirror.Pos(range.fromLine, 0);
+              const to = CodeMirror.Pos(
+                range.toLine,
+                cm.getLine(range.toLine).length,
+              );
+              if (!cm.uncomment(from, to, CONFIG.HASH_COMMENT_OPTIONS)) {
+                cm.lineComment(from, to, CONFIG.HASH_COMMENT_OPTIONS);
+              }
+            }
+          });
+        },
+        normalizedLineRanges: (cm, ranges) => {
+          const lineRanges = ranges
+            .map((range) => {
+              let from = CodeMirror.Pos(
+                Math.min(range.anchor.line, range.head.line),
+                range.anchor.line <= range.head.line
+                  ? range.anchor.ch
+                  : range.head.ch,
+              );
+              let to = CodeMirror.Pos(
+                Math.max(range.anchor.line, range.head.line),
+                range.anchor.line <= range.head.line
+                  ? range.head.ch
+                  : range.anchor.ch,
+              );
+              if (
+                (from.line !== to.line || from.ch !== to.ch) &&
+                to.ch === 0 &&
+                to.line > from.line
+              ) {
+                to = CodeMirror.Pos(
+                  to.line - 1,
+                  cm.getLine(to.line - 1).length,
+                );
+              }
+              return { fromLine: from.line, toLine: to.line };
+            })
+            .sort((a, b) => a.fromLine - b.fromLine || a.toLine - b.toLine);
+
+          const merged = [];
+          for (const range of lineRanges) {
+            const last = merged[merged.length - 1];
+            if (last && range.fromLine <= last.toLine + 1)
+              last.toLine = Math.max(last.toLine, range.toLine);
+            else merged.push({ ...range });
+          }
+          return merged;
+        },
+      };
+
+      // ============================================================================
+      // 4. GBNF ENGINE (Parser & Matcher)
+      // ============================================================================
+
+      const GBNFEngine = (() => {
+        const RULE_DECLARATION_RE = new RegExp(
+          `^\\s*(${CONFIG.RULE_NAME_PATTERN})\\s*::=\\s*(.*)$`,
+        );
+        const RULE_NAME_RE = new RegExp(`^${CONFIG.RULE_NAME_PATTERN}`);
+
+        function stripComments(source) {
+          let out = "",
+            inString = null,
+            inClass = false,
+            escaped = false;
+          for (let i = 0; i < source.length; i++) {
+            const ch = source[i];
+            if (escaped) {
+              out += ch;
+              escaped = false;
+              continue;
+            }
+            if (ch === "\\") {
+              out += ch;
+              escaped = true;
+              continue;
+            }
+            if (inString) {
+              out += ch;
+              if (ch === inString) inString = null;
+              continue;
+            }
+            if (inClass) {
+              out += ch;
+              if (ch === "]") inClass = false;
+              continue;
+            }
+            if (ch === '"' || ch === "'") {
+              inString = ch;
+              out += ch;
+              continue;
+            }
+            if (ch === "[") {
+              inClass = true;
+              out += ch;
+              continue;
+            }
+            if (ch === "#") {
+              while (i < source.length && source[i] !== "\n") i++;
+              out += "\n";
+              continue;
+            }
+            out += ch;
+          }
+          return out;
         }
-      }
-      if (current) chunks.push(current);
 
-      if (!chunks.length) throw new Error("No rules found. Add a rule like: root ::= \"hello\"");
-
-      const rules = Object.create(null);
-      const ruleOrder = [];
-      for (const chunk of chunks) {
-        if (rules[chunk.name]) throw new Error(`Duplicate rule: ${chunk.name}`);
-        const parser = new ExpressionParser(chunk.expr, chunk.name);
-        rules[chunk.name] = parser.parse();
-        ruleOrder.push(chunk.name);
-      }
-
-      // Flag misspelled rule references early; it makes diagnostics much better.
-      const refs = new Set();
-      for (const name of ruleOrder) collectRefs(rules[name], refs);
-      for (const ref of refs) {
-        if (!rules[ref]) throw new Error(`Rule "${ref}" is referenced but not defined.`);
-      }
-
-      rejectLeftRecursion(rules, ruleOrder);
-
-      return { rules, ruleOrder, defaultRoot: rules.root ? "root" : ruleOrder[0] };
-    }
-
-    /** Remove # comments while preserving # inside strings and char classes. */
-    function stripComments(source) {
-      let out = "";
-      let inString = null;
-      let inClass = false;
-      let escaped = false;
-
-      for (let i = 0; i < source.length; i++) {
-        const ch = source[i];
-
-        if (escaped) {
-          out += ch;
-          escaped = false;
-          continue;
-        }
-
-        if (ch === "\\") {
-          out += ch;
-          escaped = true;
-          continue;
-        }
-
-        if (inString) {
-          out += ch;
-          if (ch === inString) inString = null;
-          continue;
-        }
-
-        if (inClass) {
-          out += ch;
-          if (ch === "]") inClass = false;
-          continue;
-        }
-
-        if (ch === '"' || ch === "'") {
-          inString = ch;
-          out += ch;
-          continue;
-        }
-
-        if (ch === "[") {
-          inClass = true;
-          out += ch;
-          continue;
-        }
-
-        if (ch === "#") {
-          while (i < source.length && source[i] !== "\n") i++;
-          out += "\n";
-          continue;
-        }
-
-        out += ch;
-      }
-      return out;
-    }
-
-    class ExpressionParser {
-      constructor(source, ruleName) {
-        this.source = source;
-        this.ruleName = ruleName;
-        this.i = 0;
-      }
-
-      parse() {
-        const expr = this.parseAlt();
-        this.skipWs();
-        if (!this.eof()) this.fail(`Unexpected token "${this.peek()}"`);
-        return expr;
-      }
-
-      parseAlt() {
-        const options = [this.parseSeq()];
-        this.skipWs();
-        while (this.peek() === "|") {
-          this.i++;
-          options.push(this.parseSeq());
-          this.skipWs();
-        }
-        return options.length === 1 ? options[0] : { type: "alt", options };
-      }
-
-      parseSeq() {
-        const parts = [];
-        this.skipWs();
-        while (!this.eof() && this.peek() !== "|" && this.peek() !== ")") {
-          parts.push(this.parsePostfix());
-          this.skipWs();
-        }
-        if (!parts.length) return { type: "empty" };
-        return parts.length === 1 ? parts[0] : { type: "seq", parts };
-      }
-
-      parsePostfix() {
-        let atom = this.parseAtom();
-        this.skipWs();
-
-        const ch = this.peek();
-        if (ch === "?" || ch === "*" || ch === "+") {
-          this.i++;
-          const bounds = ch === "?" ? [0, 1] : ch === "*" ? [0, Infinity] : [1, Infinity];
-          return { type: "repeat", child: atom, min: bounds[0], max: bounds[1], label: ch };
-        }
-
-        if (ch === "{") {
-          const saved = this.i;
-          const quant = this.readQuantifier();
-          if (!quant) {
-            this.i = saved;
+        class ExpressionParser {
+          constructor(source, ruleName) {
+            this.source = source;
+            this.ruleName = ruleName;
+            this.i = 0;
+          }
+          parse() {
+            const expr = this.parseAlt();
+            this.skipWs();
+            if (!this.eof()) this.fail(`Unexpected token "${this.peek()}"`);
+            return expr;
+          }
+          parseAlt() {
+            const options = [this.parseSeq()];
+            this.skipWs();
+            while (this.peek() === "|") {
+              this.i++;
+              options.push(this.parseSeq());
+              this.skipWs();
+            }
+            return options.length === 1 ? options[0] : { type: "alt", options };
+          }
+          parseSeq() {
+            const parts = [];
+            this.skipWs();
+            while (!this.eof() && this.peek() !== "|" && this.peek() !== ")") {
+              parts.push(this.parsePostfix());
+              this.skipWs();
+            }
+            if (!parts.length) return { type: "empty" };
+            return parts.length === 1 ? parts[0] : { type: "seq", parts };
+          }
+          parsePostfix() {
+            let atom = this.parseAtom();
+            this.skipWs();
+            const ch = this.peek();
+            if (ch === "?" || ch === "*" || ch === "+") {
+              this.i++;
+              const bounds =
+                ch === "?"
+                  ? [0, 1]
+                  : ch === "*"
+                    ? [0, Infinity]
+                    : [1, Infinity];
+              return {
+                type: "repeat",
+                child: atom,
+                min: bounds[0],
+                max: bounds[1],
+                label: ch,
+              };
+            }
+            if (ch === "{") {
+              const saved = this.i;
+              const quant = this.readQuantifier();
+              if (!quant) {
+                this.i = saved;
+                return atom;
+              }
+              return {
+                type: "repeat",
+                child: atom,
+                min: quant.min,
+                max: quant.max,
+                label: quant.label,
+              };
+            }
             return atom;
           }
-          return { type: "repeat", child: atom, min: quant.min, max: quant.max, label: quant.label };
-        }
-
-        return atom;
-      }
-
-      parseAtom() {
-        this.skipWs();
-        const ch = this.peek();
-        if (!ch) this.fail("Expected an expression");
-
-        if (ch === '"') return { type: "literal", value: this.readString() };
-        if (ch === "'") this.fail("Single-quoted strings are not portable between llama.cpp and XGrammar; use double quotes");
-        if (ch === "[") return this.readCharClass();
-        if (ch === ".") this.fail("The '.' wildcard is supported by llama.cpp but not XGrammar; use an explicit portable character class");
-        if (ch === "(") {
-          this.i++;
-          const expr = this.parseAlt();
-          this.skipWs();
-          if (this.peek() !== ")") this.fail("Expected ')' to close group");
-          this.i++;
-          return expr;
-        }
-
-        const ident = this.readIdentifier();
-        if (ident) return { type: "ref", name: ident };
-        this.fail(`Unexpected token "${ch}"`);
-      }
-
-      readString() {
-        const quote = this.source[this.i++];
-        let value = "";
-        while (!this.eof()) {
-          const ch = this.readCodePoint();
-          if (ch === quote) return value;
-          if (ch === "\\") {
-            if (this.eof()) this.fail("Dangling escape in string literal");
-            value += this.readEscape("string literal");
-          } else {
-            value += ch;
+          parseAtom() {
+            this.skipWs();
+            const ch = this.peek();
+            if (!ch) this.fail("Expected an expression");
+            if (ch === '"')
+              return {
+                type: "literal",
+                value: this.readString(),
+              };
+            if (ch === "'")
+              this.fail(
+                "Single-quoted strings are not portable; use double quotes",
+              );
+            if (ch === "[") return this.readCharClass();
+            if (ch === ".")
+              this.fail(
+                "The '.' wildcard is not portable; use a character class",
+              );
+            if (ch === "(") {
+              this.i++;
+              const expr = this.parseAlt();
+              this.skipWs();
+              if (this.peek() !== ")") this.fail("Expected ')' to close group");
+              this.i++;
+              return expr;
+            }
+            const ident = this.readIdentifier();
+            if (ident) return { type: "ref", name: ident };
+            this.fail(`Unexpected token "${ch}"`);
           }
-        }
-        this.fail("Unterminated string literal");
-      }
-
-      readCharClass() {
-        const start = this.i;
-        this.i++; // [
-        let negated = false;
-        if (this.peek() === "^") {
-          negated = true;
-          this.i++;
-        }
-
-        const ranges = [];
-        while (!this.eof() && this.peek() !== "]") {
-          const first = this.readClassChar();
-          if (this.peek() === "-" && this.source[this.i + 1] !== "]") {
+          readString() {
+            const quote = this.source[this.i++];
+            let value = "";
+            while (!this.eof()) {
+              const ch = this.readCodePoint();
+              if (ch === quote) return value;
+              if (ch === "\\") {
+                if (this.eof()) this.fail("Dangling escape");
+                value += this.readEscape("string");
+              } else value += ch;
+            }
+            this.fail("Unterminated string");
+          }
+          readCharClass() {
+            const start = this.i++; // [
+            let negated = false;
+            if (this.peek() === "^") {
+              negated = true;
+              this.i++;
+            }
+            const ranges = [];
+            while (!this.eof() && this.peek() !== "]") {
+              const first = this.readClassChar();
+              if (this.peek() === "-" && this.source[this.i + 1] !== "]") {
+                this.i++;
+                ranges.push([first, this.readClassChar()]);
+              } else ranges.push([first, first]);
+            }
+            if (this.peek() !== "]") this.fail("Unterminated char class");
             this.i++;
-            const last = this.readClassChar();
-            ranges.push([first, last]);
-          } else {
-            ranges.push([first, first]);
+            if (!ranges.length) this.fail("Empty char class");
+            return {
+              type: "class",
+              raw: this.source.slice(start, this.i),
+              negated,
+              ranges,
+            };
           }
-        }
-        if (this.peek() !== "]") this.fail("Unterminated character class");
-        this.i++;
-        if (!ranges.length) this.fail("Empty character class");
-        return { type: "class", raw: this.source.slice(start, this.i), negated, ranges };
-      }
-
-      readClassChar() {
-        if (this.eof()) this.fail("Unexpected end of character class");
-        const ch = this.readCodePoint();
-        if (ch === "\\") {
-          if (this.eof()) this.fail("Dangling escape in character class");
-          return this.readEscape("character class");
-        }
-        return ch;
-      }
-
-      readQuantifier() {
-        const match = this.source.slice(this.i).match(/^\{\s*(\d+)\s*(?:,\s*(\d*)\s*)?\}/);
-        if (!match) return null;
-        const min = Number(match[1]);
-        const hasComma = match[0].includes(",");
-        const max = hasComma ? (match[2] === "" ? Infinity : Number(match[2])) : min;
-        if (max < min) this.fail("Invalid repeat range: max is smaller than min");
-        if (min > MAX_PORTABLE_REPEAT || (Number.isFinite(max) && max > MAX_PORTABLE_REPEAT)) {
-          this.fail(`Repeat range ${match[0]} exceeds llama.cpp's portable ${MAX_PORTABLE_REPEAT} repetition limit`);
-        }
-        this.i += match[0].length;
-        return { min, max, label: match[0].replace(/\s+/g, "") };
-      }
-
-      readIdentifier() {
-        const match = this.source.slice(this.i).match(RULE_NAME_RE);
-        if (!match) return null;
-        this.i += match[0].length;
-        return match[0];
-      }
-
-      readCodePoint() {
-        const code = this.source.codePointAt(this.i);
-        const value = String.fromCodePoint(code);
-        this.i += value.length;
-        return value;
-      }
-
-      readEscape(context) {
-        const escaped = this.source[this.i++];
-        switch (escaped) {
-          case "n": return "\n";
-          case "r": return "\r";
-          case "t": return "\t";
-          case "\\": return "\\";
-          case '"': return '"';
-          case "x": return this.readHexEscape(2, "\\x", context);
-          case "u": return this.readHexEscape(4, "\\u", context);
-          case "U": return this.readHexEscape(8, "\\U", context);
-          default:
-            this.fail(`Escape \\${escaped} in ${context} is not portable between llama.cpp and XGrammar`);
-        }
-      }
-
-      readHexEscape(digits, prefix, context) {
-        const raw = this.source.slice(this.i, this.i + digits);
-        if (!new RegExp(`^[0-9A-Fa-f]{${digits}}$`).test(raw)) {
-          this.fail(`${prefix} escape in ${context} must have exactly ${digits} hex digits`);
-        }
-        this.i += digits;
-        const code = Number.parseInt(raw, 16);
-        if (code > 0x10ffff || (code >= 0xd800 && code <= 0xdfff)) {
-          this.fail(`${prefix}${raw} is not a valid Unicode scalar value`);
-        }
-        return String.fromCodePoint(code);
-      }
-
-      skipWs() { while (/\s/.test(this.peek())) this.i++; }
-      peek() { return this.source[this.i] || ""; }
-      eof() { return this.i >= this.source.length; }
-      fail(message) { throw new Error(`${this.ruleName}: ${message} near column ${this.i + 1}`); }
-    }
-
-    function collectRefs(node, refs) {
-      if (!node) return;
-      if (node.type === "ref") refs.add(node.name);
-      if (node.type === "seq") node.parts.forEach(part => collectRefs(part, refs));
-      if (node.type === "alt") node.options.forEach(option => collectRefs(option, refs));
-      if (node.type === "repeat") collectRefs(node.child, refs);
-    }
-
-    function rejectLeftRecursion(rules, ruleOrder) {
-      const leftEdges = new Map(ruleOrder.map(name => [name, leftRefs(rules[name], rules)]));
-
-      for (const start of ruleOrder) {
-        const path = [];
-        const seen = new Set();
-        const visit = name => {
-          if (name === start && path.length) {
-            throw new Error(`Left recursion is not portable with llama.cpp: ${path.concat(name).join(" -> ")}`);
-          }
-          if (seen.has(name)) return;
-          seen.add(name);
-          path.push(name);
-          for (const next of leftEdges.get(name) || []) visit(next);
-          path.pop();
-        };
-        for (const next of leftEdges.get(start) || []) visit(next);
-      }
-    }
-
-    function leftRefs(node, rules) {
-      const refs = new Set();
-      collectLeftRefs(node, rules, refs);
-      return refs;
-    }
-
-    function collectLeftRefs(node, rules, refs) {
-      if (!node) return;
-
-      if (node.type === "ref") {
-        refs.add(node.name);
-        return;
-      }
-
-      if (node.type === "alt") {
-        node.options.forEach(option => collectLeftRefs(option, rules, refs));
-        return;
-      }
-
-      if (node.type === "repeat") {
-        collectLeftRefs(node.child, rules, refs);
-        return;
-      }
-
-      if (node.type === "seq") {
-        for (const part of node.parts) {
-          collectLeftRefs(part, rules, refs);
-          if (!isNullable(part, rules)) break;
-        }
-      }
-    }
-
-    function isNullable(node, rules, seen = new Set()) {
-      if (!node) return false;
-      if (node.type === "empty") return true;
-      if (node.type === "literal") return node.value.length === 0;
-      if (node.type === "class") return false;
-      if (node.type === "repeat") return node.min === 0 || isNullable(node.child, rules, seen);
-      if (node.type === "seq") return node.parts.every(part => isNullable(part, rules, seen));
-      if (node.type === "alt") return node.options.some(option => isNullable(option, rules, seen));
-      if (node.type === "ref") {
-        if (seen.has(node.name)) return false;
-        seen.add(node.name);
-        const nullable = isNullable(rules[node.name], rules, seen);
-        seen.delete(node.name);
-        return nullable;
-      }
-      return false;
-    }
-
-    class Matcher {
-      constructor(rules, root, input) {
-        this.rules = rules;
-        this.root = root;
-        this.input = input;
-        this.memo = new Map();
-        this.inProgress = new Set();
-        this.maxStates = 5000;
-        this.truncated = false;
-        this.error = { index: 0, expected: new Set([`rule ${root}`]) };
-      }
-
-      match() {
-        const candidates = this.matchRef(this.root, 0);
-        const full = candidates.filter(c => c.pos === this.input.length).sort((a, b) => scoreTree(b.tree) - scoreTree(a.tree))[0];
-        if (full) return { ok: true, tree: full.tree };
-
-        const farthestCandidate = candidates.reduce((best, c) => Math.max(best, c.pos), -1);
-        if (farthestCandidate >= 0 && farthestCandidate >= this.error.index) {
-          this.recordFailure(farthestCandidate, "end of input");
-        }
-
-        const index = Math.min(this.error.index, this.input.length);
-        return {
-          ok: false,
-          error: {
-            index,
-            lineCol: indexToLineCol(this.input, index),
-            expected: [...this.error.expected].sort(),
-            found: describeFound(this.input, index),
-          },
-          limited: this.truncated,
-          partialTree: candidates.sort((a, b) => b.pos - a.pos)[0]?.tree || null,
-        };
-      }
-
-      matchRef(name, pos) {
-        const key = `${name}@${pos}`;
-        if (this.memo.has(key)) return this.memo.get(key);
-        if (this.inProgress.has(key)) {
-          this.recordFailure(pos, `non-left-recursive ${name}`);
-          return [];
-        }
-        this.inProgress.add(key);
-        const matches = this.matchNode(this.rules[name], pos).map(m => ({
-          pos: m.pos,
-          tree: { type: "rule", name, start: pos, end: m.pos, children: [m.tree] }
-        }));
-        this.inProgress.delete(key);
-        const limited = this.limitStates(matches);
-        this.memo.set(key, limited);
-        return limited;
-      }
-
-      matchNode(node, pos) {
-        switch (node.type) {
-          case "empty":
-            return [{ pos, tree: { type: "empty", start: pos, end: pos } }];
-
-          case "literal": {
-            if (this.input.startsWith(node.value, pos)) {
-              return [{ pos: pos + node.value.length, tree: { type: "literal", value: node.value, start: pos, end: pos + node.value.length } }];
+          readClassChar() {
+            if (this.eof()) this.fail("Unexpected end of class");
+            const ch = this.readCodePoint();
+            if (ch === "\\") {
+              if (this.eof()) this.fail("Dangling escape in class");
+              return this.readEscape("class");
             }
-            this.recordFailure(pos, quoteForDisplay(node.value));
-            return [];
+            return ch;
           }
-
-          case "class": {
-            const ch = readInputCodePoint(this.input, pos);
-            if (ch && classContains(node, ch)) {
-              return [{ pos: pos + ch.length, tree: { type: "class", raw: node.raw, value: ch, start: pos, end: pos + ch.length } }];
+          readQuantifier() {
+            const match = this.source
+              .slice(this.i)
+              .match(/^\{\s*(\d+)\s*(?:,\s*(\d*)\s*)?\}/);
+            if (!match) return null;
+            const min = Number(match[1]);
+            const hasComma = match[0].includes(",");
+            const max = hasComma
+              ? match[2] === ""
+                ? Infinity
+                : Number(match[2])
+              : min;
+            if (max < min) this.fail("Invalid repeat range");
+            if (
+              min > CONFIG.MAX_PORTABLE_REPEAT ||
+              (Number.isFinite(max) && max > CONFIG.MAX_PORTABLE_REPEAT)
+            ) {
+              this.fail(
+                `Repeat exceeds portable limit of ${CONFIG.MAX_PORTABLE_REPEAT}`,
+              );
             }
-            this.recordFailure(pos, node.raw);
-            return [];
+            this.i += match[0].length;
+            return {
+              min,
+              max,
+              label: match[0].replace(/\s+/g, ""),
+            };
           }
+          readIdentifier() {
+            const match = this.source.slice(this.i).match(RULE_NAME_RE);
+            if (!match) return null;
+            this.i += match[0].length;
+            return match[0];
+          }
+          readCodePoint() {
+            const code = this.source.codePointAt(this.i);
+            const value = String.fromCodePoint(code);
+            this.i += value.length;
+            return value;
+          }
+          readEscape(ctx) {
+            const escaped = this.source[this.i++];
+            switch (escaped) {
+              case "n":
+                return "\n";
+              case "r":
+                return "\r";
+              case "t":
+                return "\t";
+              case "\\":
+                return "\\";
+              case '"':
+                return '"';
+              case "x":
+                return this.readHexEscape(2, "\\x", ctx);
+              case "u":
+                return this.readHexEscape(4, "\\u", ctx);
+              case "U":
+                return this.readHexEscape(8, "\\U", ctx);
+              default:
+                this.fail(`Escape \\${escaped} in ${ctx} is not portable`);
+            }
+          }
+          readHexEscape(digits, prefix, ctx) {
+            const raw = this.source.slice(this.i, this.i + digits);
+            if (!new RegExp(`^[0-9A-Fa-f]{${digits}}$`).test(raw))
+              this.fail(`${prefix} escape must have ${digits} hex digits`);
+            this.i += digits;
+            const code = Number.parseInt(raw, 16);
+            if (code > 0x10ffff || (code >= 0xd800 && code <= 0xdfff))
+              this.fail(`${prefix}${raw} is invalid Unicode`);
+            return String.fromCodePoint(code);
+          }
+          skipWs() {
+            while (/\s/.test(this.peek())) this.i++;
+          }
+          peek() {
+            return this.source[this.i] || "";
+          }
+          eof() {
+            return this.i >= this.source.length;
+          }
+          fail(msg) {
+            throw new Error(
+              `${this.ruleName}: ${msg} near column ${this.i + 1}`,
+            );
+          }
+        }
 
-          case "ref":
-            return this.matchRef(node.name, pos);
+        function isNullable(node, rules, seen = new Set()) {
+          if (!node) return false;
+          if (node.type === "empty") return true;
+          if (node.type === "literal") return node.value.length === 0;
+          if (node.type === "class") return false;
+          if (node.type === "repeat")
+            return node.min === 0 || isNullable(node.child, rules, seen);
+          if (node.type === "seq")
+            return node.parts.every((part) => isNullable(part, rules, seen));
+          if (node.type === "alt")
+            return node.options.some((option) =>
+              isNullable(option, rules, seen),
+            );
+          if (node.type === "ref") {
+            if (seen.has(node.name)) return false;
+            seen.add(node.name);
+            const nullable = isNullable(rules[node.name], rules, seen);
+            seen.delete(node.name);
+            return nullable;
+          }
+          return false;
+        }
 
-          case "seq": {
-            let states = [{ pos, children: [] }];
+        function collectLeftRefs(node, rules, refs) {
+          if (!node) return;
+          if (node.type === "ref") {
+            refs.add(node.name);
+            return;
+          }
+          if (node.type === "alt") {
+            node.options.forEach((option) =>
+              collectLeftRefs(option, rules, refs),
+            );
+            return;
+          }
+          if (node.type === "repeat") {
+            collectLeftRefs(node.child, rules, refs);
+            return;
+          }
+          if (node.type === "seq") {
             for (const part of node.parts) {
-              const next = [];
-              for (const state of states) {
-                for (const match of this.matchNode(part, state.pos)) {
-                  next.push({ pos: match.pos, children: state.children.concat(match.tree) });
-                }
-              }
-              states = this.limitStates(next);
-              if (!states.length) return [];
+              collectLeftRefs(part, rules, refs);
+              if (!isNullable(part, rules)) break;
             }
-            return states.map(s => ({ pos: s.pos, tree: { type: "seq", start: pos, end: s.pos, children: s.children } }));
+          }
+        }
+
+        function rejectLeftRecursion(rules, ruleOrder) {
+          const leftEdges = new Map(
+            ruleOrder.map((name) => {
+              const refs = new Set();
+              collectLeftRefs(rules[name], rules, refs);
+              return [name, refs];
+            }),
+          );
+
+          for (const start of ruleOrder) {
+            const path = [],
+              seen = new Set();
+            const visit = (name) => {
+              if (name === start && path.length)
+                throw new Error(
+                  `Left recursion detected: ${path.concat(name).join(" -> ")}`,
+                );
+              if (seen.has(name)) return;
+              seen.add(name);
+              path.push(name);
+              for (const next of leftEdges.get(name) || []) visit(next);
+              path.pop();
+            };
+            for (const next of leftEdges.get(start) || []) visit(next);
+          }
+        }
+
+        class Matcher {
+          constructor(rules, root, input) {
+            this.rules = rules;
+            this.root = root;
+            this.input = input;
+            this.memo = new Map();
+            this.inProgress = new Set();
+            this.maxStates = 5000;
+            this.truncated = false;
+            this.error = {
+              index: 0,
+              expected: new Set([`rule ${root}`]),
+            };
           }
 
-          case "alt": {
-            const all = [];
-            for (const option of node.options) all.push(...this.matchNode(option, pos));
-            return this.limitStates(all).map(m => ({
+          match() {
+            const res = this.matchRef(this.root, 0);
+            const candidates = res.matches;
+
+            const full = candidates
+              .filter((c) => c.pos === this.input.length)
+              .sort(
+                (a, b) => this.scoreTree(b.tree) - this.scoreTree(a.tree),
+              )[0];
+            if (full) return { ok: true, tree: full.tree };
+
+            const farthestCandidate = candidates.reduce(
+              (best, c) => Math.max(best, c.pos),
+              -1,
+            );
+            if (farthestCandidate >= 0 && farthestCandidate >= this.error.index)
+              this.recordFailure(farthestCandidate, "end of input");
+
+            const index = Math.min(this.error.index, this.input.length);
+            let line = 1,
+              col = 1;
+            for (let i = 0; i < index; i++) {
+              if (this.input[i] === "\n") {
+                line++;
+                col = 1;
+              } else col++;
+            }
+
+            let found =
+              index >= this.input.length
+                ? "end of input"
+                : this.input[index] === "\n"
+                  ? "newline"
+                  : this.input[index] === "\t"
+                    ? "tab"
+                    : this.input[index] === " "
+                      ? "space"
+                      : Utils.quoteForDisplay(this.input[index]);
+
+            return {
+              ok: false,
+              error: {
+                index,
+                lineCol: { line, col },
+                expected: [...this.error.expected].sort(),
+                found,
+              },
+              limited: this.truncated,
+              partialTree: res.partial ? res.partial.tree : null,
+            };
+          }
+
+          matchRef(name, pos) {
+            const key = `${name}@${pos}`;
+            if (this.memo.has(key)) return this.memo.get(key);
+            if (this.inProgress.has(key)) {
+              this.recordFailure(pos, `non-left-recursive ${name}`);
+              return { matches: [], partial: null };
+            }
+
+            this.inProgress.add(key);
+            const res = this.matchNode(this.rules[name], pos);
+
+            const matches = res.matches.map((m) => ({
               pos: m.pos,
-              tree: { type: "alt", start: pos, end: m.pos, children: [m.tree] }
+              tree: {
+                type: "rule",
+                name,
+                start: pos,
+                end: m.pos,
+                children: [m.tree],
+              },
             }));
+
+            let partial = null;
+            if (res.partial) {
+              partial = {
+                pos: res.partial.pos,
+                tree: {
+                  type: "rule",
+                  partial: true,
+                  name,
+                  start: pos,
+                  end: res.partial.pos,
+                  children: [res.partial.tree],
+                },
+              };
+            }
+
+            this.inProgress.delete(key);
+            const limited = this.limitStates(matches);
+            const out = { matches: limited, partial };
+            this.memo.set(key, out);
+            return out;
           }
 
-          case "repeat":
-            return this.matchRepeat(node, pos);
+          matchNode(node, pos) {
+            switch (node.type) {
+              case "empty":
+                return {
+                  matches: [
+                    {
+                      pos,
+                      tree: {
+                        type: "empty",
+                        start: pos,
+                        end: pos,
+                      },
+                    },
+                  ],
+                  partial: null,
+                };
 
-          default:
-            throw new Error(`Internal matcher error: unknown node type ${node.type}`);
-        }
-      }
+              case "literal":
+                if (this.input.startsWith(node.value, pos)) {
+                  return {
+                    matches: [
+                      {
+                        pos: pos + node.value.length,
+                        tree: {
+                          type: "literal",
+                          value: node.value,
+                          start: pos,
+                          end: pos + node.value.length,
+                        },
+                      },
+                    ],
+                    partial: null,
+                  };
+                }
+                this.recordFailure(pos, Utils.quoteForDisplay(node.value));
+                return {
+                  matches: [],
+                  partial: {
+                    pos,
+                    tree: {
+                      type: "literal",
+                      partial: true,
+                      value: node.value,
+                      start: pos,
+                      end: pos,
+                    },
+                  },
+                };
 
-      matchRepeat(node, pos) {
-        const accepted = [];
-        let frontier = [{ pos, count: 0, children: [] }];
-        const hardMax = Math.min(node.max, this.input.length + 1);
+              case "class":
+                const ch =
+                  pos < this.input.length
+                    ? String.fromCodePoint(this.input.codePointAt(pos))
+                    : "";
+                if (ch) {
+                  const code = ch.codePointAt(0);
+                  const hit = node.ranges.some(
+                    ([a, b]) =>
+                      code >= a.codePointAt(0) && code <= b.codePointAt(0),
+                  );
+                  if (node.negated ? !hit : hit) {
+                    return {
+                      matches: [
+                        {
+                          pos: pos + ch.length,
+                          tree: {
+                            type: "class",
+                            raw: node.raw,
+                            value: ch,
+                            start: pos,
+                            end: pos + ch.length,
+                          },
+                        },
+                      ],
+                      partial: null,
+                    };
+                  }
+                }
+                this.recordFailure(pos, node.raw);
+                return {
+                  matches: [],
+                  partial: {
+                    pos,
+                    tree: {
+                      type: "class",
+                      partial: true,
+                      raw: node.raw,
+                      start: pos,
+                      end: pos,
+                    },
+                  },
+                };
 
-        while (frontier.length) {
-          const state = frontier.shift();
-          if (state.count >= node.min) {
-            accepted.push({
-              pos: state.pos,
-              tree: { type: "repeat", label: node.label, start: pos, end: state.pos, children: state.children }
-            });
+              case "ref":
+                return this.matchRef(node.name, pos);
+
+              case "seq":
+                let states = [{ pos, children: [] }];
+                let bestSeqPartial = null;
+
+                for (const part of node.parts) {
+                  const next = [];
+                  for (const state of states) {
+                    const res = this.matchNode(part, state.pos);
+                    for (const match of res.matches) {
+                      next.push({
+                        pos: match.pos,
+                        children: state.children.concat(match.tree),
+                      });
+                    }
+
+                    // Capture the deepest partial failure in this sequence path
+                    if (res.partial) {
+                      if (
+                        !bestSeqPartial ||
+                        res.partial.pos > bestSeqPartial.pos
+                      ) {
+                        bestSeqPartial = {
+                          pos: res.partial.pos,
+                          tree: {
+                            type: "seq",
+                            partial: true,
+                            start: pos,
+                            end: res.partial.pos,
+                            children: state.children.concat(res.partial.tree),
+                          },
+                        };
+                      }
+                    }
+                  }
+                  states = this.limitStates(next);
+                  if (!states.length) break;
+                }
+                return {
+                  matches: states.map((s) => ({
+                    pos: s.pos,
+                    tree: {
+                      type: "seq",
+                      start: pos,
+                      end: s.pos,
+                      children: s.children,
+                    },
+                  })),
+                  partial: bestSeqPartial,
+                };
+
+              case "alt":
+                const allMatches = [];
+                let bestAltPartial = null;
+                for (const option of node.options) {
+                  const res = this.matchNode(option, pos);
+                  allMatches.push(...res.matches);
+
+                  if (
+                    res.partial &&
+                    (!bestAltPartial || res.partial.pos > bestAltPartial.pos)
+                  ) {
+                    bestAltPartial = res.partial;
+                  }
+                }
+                if (bestAltPartial) {
+                  bestAltPartial = {
+                    pos: bestAltPartial.pos,
+                    tree: {
+                      type: "alt",
+                      partial: true,
+                      start: pos,
+                      end: bestAltPartial.pos,
+                      children: [bestAltPartial.tree],
+                    },
+                  };
+                }
+                return {
+                  matches: this.limitStates(allMatches).map((m) => ({
+                    pos: m.pos,
+                    tree: {
+                      type: "alt",
+                      start: pos,
+                      end: m.pos,
+                      children: [m.tree],
+                    },
+                  })),
+                  partial: bestAltPartial,
+                };
+
+              case "repeat":
+                const accepted = [];
+                let frontier = [{ pos, count: 0, children: [] }];
+                const hardMax = Math.min(node.max, this.input.length + 1);
+                let bestRepPartial = null;
+
+                while (frontier.length) {
+                  const state = frontier.shift();
+                  if (state.count >= node.min) {
+                    accepted.push({
+                      pos: state.pos,
+                      tree: {
+                        type: "repeat",
+                        label: node.label,
+                        start: pos,
+                        end: state.pos,
+                        children: state.children,
+                      },
+                    });
+                  }
+                  if (state.count >= hardMax) continue;
+
+                  const res = this.matchNode(node.child, state.pos);
+                  for (const match of res.matches) {
+                    if (match.pos === state.pos) continue;
+                    frontier.push({
+                      pos: match.pos,
+                      count: state.count + 1,
+                      children: state.children.concat(match.tree),
+                    });
+                  }
+
+                  if (
+                    res.partial &&
+                    (!bestRepPartial || res.partial.pos > bestRepPartial.pos)
+                  ) {
+                    bestRepPartial = {
+                      pos: res.partial.pos,
+                      tree: {
+                        type: "repeat",
+                        partial: true,
+                        label: node.label,
+                        start: pos,
+                        end: res.partial.pos,
+                        children: state.children.concat(res.partial.tree),
+                      },
+                    };
+                  }
+                  frontier = this.limitStates(frontier);
+                }
+                return {
+                  matches: this.limitStates(accepted),
+                  partial: bestRepPartial,
+                };
+            }
           }
-
-          if (state.count >= hardMax) continue;
-
-          const matches = this.matchNode(node.child, state.pos);
-          for (const match of matches) {
-            // Prevent infinite loops on expressions that can match empty text.
-            if (match.pos === state.pos) continue;
-            frontier.push({ pos: match.pos, count: state.count + 1, children: state.children.concat(match.tree) });
+          recordFailure(index, expected) {
+            if (index > this.error.index) {
+              this.error.index = index;
+              this.error.expected = new Set([expected]);
+            } else if (index === this.error.index)
+              this.error.expected.add(expected);
           }
-          frontier = this.limitStates(frontier);
+          limitStates(states) {
+            if (states.length <= this.maxStates) return states;
+            this.truncated = true;
+            return states
+              .sort((a, b) => b.pos - a.pos)
+              .slice(0, this.maxStates);
+          }
+          scoreTree(tree) {
+            if (!tree) return 0;
+            return (
+              tree.end -
+              tree.start +
+              (tree.children
+                ? tree.children.reduce((n, c) => n + this.scoreTree(c), 0)
+                : 0)
+            );
+          }
         }
 
-        return this.limitStates(accepted);
-      }
+        return {
+          parse: (source) => {
+            const clean = stripComments(source);
+            const chunks = [];
+            let current = null;
+            for (const rawLine of clean.split(/\r?\n/)) {
+              const line = rawLine.trimEnd();
+              const start = line.match(RULE_DECLARATION_RE);
+              if (start) {
+                if (current) chunks.push(current);
+                current = { name: start[1], expr: start[2] };
+              } else if (line.includes("::=")) {
+                throw new Error(
+                  `Rule name "${line.match(/^\s*([^\s:]+)/)?.[1] || ""}" is not portable.`,
+                );
+              } else if (current && line.trim()) {
+                current.expr += " " + line.trim();
+              }
+            }
+            if (current) chunks.push(current);
+            if (!chunks.length)
+              throw new Error(
+                'No rules found. Add a rule like: root ::= "hello"',
+              );
 
-      recordFailure(index, expected) {
-        if (index > this.error.index) {
-          this.error.index = index;
-          this.error.expected = new Set([expected]);
-        } else if (index === this.error.index) {
-          this.error.expected.add(expected);
-        }
-      }
+            const rules = Object.create(null);
+            const ruleOrder = [];
+            for (const chunk of chunks) {
+              if (rules[chunk.name])
+                throw new Error(`Duplicate rule: ${chunk.name}`);
+              rules[chunk.name] = new ExpressionParser(
+                chunk.expr,
+                chunk.name,
+              ).parse();
+              ruleOrder.push(chunk.name);
+            }
 
-      limitStates(states) {
-        if (states.length <= this.maxStates) return states;
-        this.truncated = true;
-        return states.sort((a, b) => b.pos - a.pos).slice(0, this.maxStates);
-      }
-    }
+            const refs = new Set();
+            for (const name of ruleOrder) {
+              const scan = (node) => {
+                if (!node) return;
+                if (node.type === "ref") refs.add(node.name);
+                if (node.type === "seq") node.parts.forEach(scan);
+                if (node.type === "alt") node.options.forEach(scan);
+                if (node.type === "repeat") scan(node.child);
+              };
+              scan(rules[name]);
+            }
+            for (const ref of refs)
+              if (!rules[ref])
+                throw new Error(`Rule "${ref}" is referenced but not defined.`);
 
-    function classContains(node, ch) {
-      const code = ch.codePointAt(0);
-      const hit = node.ranges.some(([a, b]) => code >= a.codePointAt(0) && code <= b.codePointAt(0));
-      return node.negated ? !hit : hit;
-    }
+            rejectLeftRecursion(rules, ruleOrder);
+            return {
+              rules,
+              ruleOrder,
+              defaultRoot: rules.root ? "root" : ruleOrder[0],
+            };
+          },
+          Matcher,
+        };
+      })();
 
-    function readInputCodePoint(input, index) {
-      if (index >= input.length) return "";
-      const code = input.codePointAt(index);
-      return String.fromCodePoint(code);
-    }
+      // ============================================================================
+      // 5. APPLICATION UI & LOGIC
+      // ============================================================================
 
-    function scoreTree(tree) {
-      if (!tree) return 0;
-      return (tree.end - tree.start) + (tree.children ? tree.children.reduce((n, c) => n + scoreTree(c), 0) : 0);
-    }
+      const App = {
+        DOM: {},
+        editors: { grammar: null, input: null },
+        state: {
+          debounceTimer: 0,
+          previousRuleNames: [],
+          vimEnabled: false,
+          activeMarks: [],
+          currentExampleIndex: 0,
+        },
 
-    function indexToLineCol(text, index) {
-      let line = 1;
-      let col = 1;
-      for (let i = 0; i < index; i++) {
-        if (text[i] === "\n") { line++; col = 1; }
-        else col++;
-      }
-      return { line, col };
-    }
+        init() {
+          this.cacheDOM();
+          this.setupEditors();
+          this.setupVimBindings();
+          this.setupSplitter();
+          this.setupEvents();
+          this.loadInitialState();
+        },
 
-    function describeFound(text, index) {
-      if (index >= text.length) return "end of input";
-      const ch = text[index];
-      if (ch === "\n") return "newline";
-      if (ch === "\t") return "tab";
-      if (ch === " ") return "space";
-      return quoteForDisplay(ch);
-    }
+        cacheDOM() {
+          this.DOM = {
+            main: document.getElementById("mainLayout"),
+            splitter: document.getElementById("editorSplitter"),
+            grammarPane: document.getElementById("grammarPane"),
+            inputPane: document.getElementById("inputPane"),
+            grammarHost: document.getElementById("grammar"),
+            inputHost: document.getElementById("input"),
+            rootSelect: document.getElementById("rootRule"),
+            status: document.getElementById("status"),
+            results: document.getElementById("results"),
+            elapsed: document.getElementById("elapsed"),
+            ruleCount: document.getElementById("ruleCount"),
+            vimToggle: document.getElementById("vimToggle"),
+            vimIndicator: document.getElementById("vimMode"),
+            vimModal: document.getElementById("vimConfirmModal"),
+            vimConfirmBtn: document.getElementById("vimConfirmEnable"),
+            vimCancelBtn: document.getElementById("vimConfirmCancel"),
+            exampleMenu: document.getElementById("exampleMenu"),
+            exampleSummary: document.querySelector("#exampleMenu summary"),
+            exampleList: document.getElementById("exampleList"),
+          };
+        },
 
-    function quoteForDisplay(value) {
-      return JSON.stringify(value).replace(/^"|"$/g, match => match);
-    }
+        setupEditors() {
+          this.state.vimEnabled = Storage.getBool(
+            CONFIG.STORAGE_KEYS.vimEnabled,
+            false,
+          );
+          const baseOptions = {
+            theme: "material-darker",
+            keyMap: this.state.vimEnabled ? "vim" : "default",
+            lineNumbers: true,
+            lineWrapping: true,
+            tabSize: 4,
+            indentUnit: 4,
+            indentWithTabs: false,
+            extraKeys: {
+              Tab: (cm) => cm.execCommand("insertSoftTab"),
+              "Shift-Tab": (cm) => cm.execCommand("indentLess"),
+            },
+          };
 
-    function htmlEscape(value) {
-      return String(value)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
-    }
+          this.editors.grammar = CodeMirror(this.DOM.grammarHost, {
+            ...baseOptions,
+            mode: "gbnf",
+            autofocus: true,
+          });
+          this.editors.input = CodeMirror(this.DOM.inputHost, {
+            ...baseOptions,
+            mode: "javascript",
+          });
 
-    function renderGrammarError(message) {
-      resultsEl.innerHTML = `
-        <div class="card">
-          <div class="card-head"><h2>Grammar Error</h2><span class="bad-text">blocked</span></div>
-          <div class="card-body">
-            <div class="kv">
-              <div class="k">Problem</div><div class="v bad-text mono">${htmlEscape(message)}</div>
-              <div class="k">Hint</div><div class="v">Check portable llama.cpp/XGrammar syntax: rule names, double-quoted literals, character classes, and defined rule references.</div>
+          const syncClipboard = {
+            "Ctrl-C": (cm) => {
+              if (this.state.vimEnabled && cm.state.vim?.visualMode) {
+                Clipboard.yank(cm);
+                return true;
+              }
+              return CodeMirror.Pass;
+            },
+            "Cmd-C": (cm) => {
+              if (this.state.vimEnabled && cm.state.vim?.visualMode) {
+                Clipboard.yank(cm);
+                return true;
+              }
+              return CodeMirror.Pass;
+            },
+            "Ctrl-V": (cm) => {
+              if (
+                this.state.vimEnabled &&
+                !cm.state.vim?.insertMode &&
+                !cm.state.vim?.visualMode
+              ) {
+                Clipboard.paste(cm);
+                return true;
+              }
+              return CodeMirror.Pass;
+            },
+            "Cmd-V": (cm) => {
+              if (
+                this.state.vimEnabled &&
+                !cm.state.vim?.insertMode &&
+                !cm.state.vim?.visualMode
+              ) {
+                Clipboard.paste(cm);
+                return true;
+              }
+              return CodeMirror.Pass;
+            },
+          };
+          this.editors.grammar.addKeyMap(syncClipboard);
+          this.editors.input.addKeyMap(syncClipboard);
+        },
+
+        setupVimBindings() {
+          if (!CodeMirror.Vim) return;
+          CodeMirror.Vim.mapleader = " "; // Critical fix: explicitly define leader
+
+          CodeMirror.Vim.defineOperator(
+            "toggleHashComment",
+            (cm, args, ranges, anchor) => {
+              EditorCommands.toggleHashComment(cm, ranges);
+              cm.focus();
+              return anchor;
+            },
+          );
+          CodeMirror.Vim.mapCommand(
+            "gc",
+            "operator",
+            "toggleHashComment",
+            {},
+            { context: "normal" },
+          );
+          CodeMirror.Vim.mapCommand(
+            "gc",
+            "operator",
+            "toggleHashComment",
+            {},
+            { context: "visual" },
+          );
+
+          CodeMirror.Vim.defineAction("clipboardYank", (cm) =>
+            Clipboard.yank(cm),
+          );
+          CodeMirror.Vim.defineAction("clipboardPaste", (cm) =>
+            Clipboard.paste(cm, { after: true }),
+          );
+
+          // Correct leader mappings mapped to our clipboard handler
+          CodeMirror.Vim.mapCommand(
+            "<leader>y",
+            "action",
+            "clipboardYank",
+            {},
+            { context: "visual" },
+          );
+          CodeMirror.Vim.mapCommand(
+            "<leader>p",
+            "action",
+            "clipboardPaste",
+            {},
+            { context: "normal" },
+          );
+        },
+
+        setupSplitter() {
+          const defaultRatio = 0.46;
+          let currentRatio = Utils.clamp(
+            Storage.getNumber(
+              CONFIG.STORAGE_KEYS.editorSplitRatio,
+              defaultRatio,
+            ),
+            0.1,
+            0.9,
+          );
+
+          // Apply grid cleanly via `fr` units to avoid getBoundingClientRect() race conditions on load
+          const applySplit = (ratio) => {
+            currentRatio = Utils.clamp(ratio, 0.1, 0.9);
+            const totalFr = 2.1; // Represents the combined width of both editors
+            const leftFr = currentRatio * totalFr;
+            const rightFr = (1 - currentRatio) * totalFr;
+            this.DOM.main.style.gridTemplateColumns = `minmax(260px, ${leftFr}fr) 7px minmax(260px, ${rightFr}fr) minmax(320px, 0.8fr)`;
+            if (this.editors.grammar) this.editors.grammar.refresh();
+            if (this.editors.input) this.editors.input.refresh();
+          };
+
+          applySplit(currentRatio); // Apply instantly
+
+          let dragState = null;
+          this.DOM.splitter.addEventListener("pointerdown", (e) => {
+            if (window.matchMedia("(max-width: 1120px)").matches) return;
+            const gRect = this.DOM.grammarPane.getBoundingClientRect();
+            const iRect = this.DOM.inputPane.getBoundingClientRect();
+            dragState = {
+              leftEdge: gRect.left,
+              totalWidth: gRect.width + iRect.width + 7,
+            };
+
+            this.DOM.splitter.setPointerCapture(e.pointerId);
+            this.DOM.splitter.classList.add("active");
+            this.DOM.main.classList.add("resizing");
+            e.preventDefault();
+          });
+
+          this.DOM.splitter.addEventListener("pointermove", (e) => {
+            if (!dragState) return;
+            applySplit((e.clientX - dragState.leftEdge) / dragState.totalWidth);
+          });
+
+          const stopDrag = (e) => {
+            if (!dragState) return;
+            dragState = null;
+            this.DOM.splitter.releasePointerCapture?.(e.pointerId);
+            this.DOM.splitter.classList.remove("active");
+            this.DOM.main.classList.remove("resizing");
+            Storage.setString(
+              CONFIG.STORAGE_KEYS.editorSplitRatio,
+              currentRatio.toString(),
+            );
+          };
+
+          this.DOM.splitter.addEventListener("pointerup", stopDrag);
+          this.DOM.splitter.addEventListener("pointercancel", stopDrag);
+        },
+
+        setupEvents() {
+          this.editors.grammar.on("change", () => {
+            Storage.setString(
+              CONFIG.STORAGE_KEYS.grammarSource,
+              this.editors.grammar.getValue(),
+            );
+            this.scheduleRun();
+          });
+          this.editors.input.on("change", () => {
+            Storage.setString(
+              CONFIG.STORAGE_KEYS.inputSource,
+              this.editors.input.getValue(),
+            );
+            this.scheduleRun();
+          });
+          this.DOM.rootSelect.addEventListener("change", () =>
+            this.runDebugger(),
+          );
+
+          // Examples
+          EXAMPLES.forEach((example, index) => {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.setAttribute("role", "menuitem");
+            btn.textContent = example.name;
+            btn.addEventListener("click", () => this.loadExample(index));
+            this.DOM.exampleList.appendChild(btn);
+          });
+
+          // Vim Toggle
+          this.DOM.vimToggle.addEventListener("dblclick", () => {
+            if (this.state.vimEnabled) this.setVimMode(false);
+            else if (Storage.getBool(CONFIG.STORAGE_KEYS.vimConfirmed, false))
+              this.setVimMode(true);
+            else {
+              this.DOM.vimModal.classList.add("open");
+              this.DOM.vimConfirmBtn.focus();
+            }
+          });
+          this.DOM.vimCancelBtn.addEventListener("click", () => {
+            this.DOM.vimModal.classList.remove("open");
+            this.DOM.vimToggle.focus();
+          });
+          this.DOM.vimConfirmBtn.addEventListener("click", () => {
+            Storage.setBool(CONFIG.STORAGE_KEYS.vimConfirmed, true);
+            this.setVimMode(true);
+            this.DOM.vimModal.classList.remove("open");
+          });
+          this.DOM.vimModal.addEventListener("click", (e) => {
+            if (e.target === this.DOM.vimModal)
+              this.DOM.vimModal.classList.remove("open");
+          });
+          document.addEventListener("keydown", (e) => {
+            if (
+              e.key === "Escape" &&
+              this.DOM.vimModal.classList.contains("open")
+            )
+              this.DOM.vimModal.classList.remove("open");
+          });
+        },
+
+        loadInitialState() {
+          this.editors.grammar.setValue(
+            Storage.getString(
+              CONFIG.STORAGE_KEYS.grammarSource,
+              EXAMPLES[0].grammar,
+            ),
+          );
+          this.editors.input.setValue(
+            Storage.getString(
+              CONFIG.STORAGE_KEYS.inputSource,
+              EXAMPLES[0].input,
+            ),
+          );
+          this.setVimMode(this.state.vimEnabled);
+          this.updateExampleSummary();
+          setTimeout(() => this.runDebugger(), 0);
+        },
+
+        loadExample(index) {
+          const example = EXAMPLES[index] || EXAMPLES[0];
+          this.state.currentExampleIndex = EXAMPLES[index] ? index : 0;
+          this.editors.grammar.setValue(example.grammar);
+          this.editors.input.setValue(example.input);
+          this.DOM.exampleMenu.open = false;
+          this.updateExampleSummary();
+          this.scheduleRun();
+        },
+
+        updateExampleSummary() {
+          this.DOM.exampleSummary.textContent = `Examples: ${EXAMPLES[this.state.currentExampleIndex].name} ▾`;
+        },
+
+        setVimMode(enabled) {
+          this.state.vimEnabled = enabled;
+          Storage.setBool(CONFIG.STORAGE_KEYS.vimEnabled, enabled);
+          const keyMap = enabled ? "vim" : "default";
+          this.editors.grammar.setOption("keyMap", keyMap);
+          this.editors.input.setOption("keyMap", keyMap);
+          this.DOM.vimToggle.classList.toggle("vim-active", enabled);
+          this.DOM.vimToggle.setAttribute("aria-pressed", String(enabled));
+          this.DOM.vimIndicator.classList.toggle("active", enabled);
+          this.DOM.vimToggle.title = enabled
+            ? "Vim mode active — double-click to turn off"
+            : "Double-click to toggle Vim mode";
+        },
+
+        scheduleRun() {
+          clearTimeout(this.state.debounceTimer);
+          this.state.debounceTimer = setTimeout(() => this.runDebugger(), 160);
+        },
+
+        setStatus(kind, text) {
+          this.DOM.status.className = `status-pill ${kind}`;
+          this.DOM.status.querySelector("span:last-child").textContent = text;
+        },
+
+        runDebugger() {
+          const started = performance.now();
+          this.state.activeMarks.forEach((m) => m.clear());
+          this.state.activeMarks = [];
+
+          try {
+            const grammar = GBNFEngine.parse(this.editors.grammar.getValue());
+            this.refreshRootSelector(grammar.ruleOrder);
+            const selectedRoot =
+              this.DOM.rootSelect.value || grammar.defaultRoot;
+            this.DOM.ruleCount.textContent = String(grammar.ruleOrder.length);
+
+            if (!selectedRoot || !grammar.rules[selectedRoot]) {
+              this.setStatus("bad", "Grammar error");
+              this.renderGrammarError("No usable start rule found.");
+              return;
+            }
+
+            const matcher = new GBNFEngine.Matcher(
+              grammar.rules,
+              selectedRoot,
+              this.editors.input.getValue(),
+            );
+            const result = matcher.match();
+            this.DOM.elapsed.textContent = `${(performance.now() - started).toFixed(1)} ms`;
+
+            if (result.ok) {
+              this.setStatus("ok", `Match: ${selectedRoot}`);
+              this.markInputRange(
+                0,
+                this.editors.input.getValue().length,
+                "cm-parse-success",
+              );
+              this.renderSuccess(result, selectedRoot, grammar);
+            } else {
+              this.setStatus(
+                result.limited ? "warn" : "bad",
+                result.limited ? "Analysis limit" : "No match",
+              );
+              this.markInputRange(
+                result.error.index,
+                Math.min(
+                  result.error.index + 1,
+                  this.editors.input.getValue().length,
+                ),
+                "cm-parse-error",
+              );
+              this.renderFailure(result, selectedRoot, grammar);
+            }
+          } catch (error) {
+            this.DOM.elapsed.textContent = `${(performance.now() - started).toFixed(1)} ms`;
+            this.setStatus("bad", "Grammar error");
+            this.renderGrammarError(error.message);
+          }
+        },
+
+        markInputRange(fromIndex, toIndex, className) {
+          const len = this.editors.input.getValue().length;
+          const from = this.editors.input.posFromIndex(
+            Math.max(0, Math.min(fromIndex, len)),
+          );
+          const to = this.editors.input.posFromIndex(
+            Math.max(fromIndex, Math.min(toIndex || fromIndex + 1, len)),
+          );
+          this.state.activeMarks.push(
+            this.editors.input.markText(from, to, { className }),
+          );
+        },
+
+        refreshRootSelector(ruleNames) {
+          if (
+            ruleNames.length === this.state.previousRuleNames.length &&
+            ruleNames.every((n, i) => n === this.state.previousRuleNames[i])
+          )
+            return;
+          const previous = this.DOM.rootSelect.value;
+          this.DOM.rootSelect.innerHTML = "";
+          for (const name of ruleNames) {
+            const opt = document.createElement("option");
+            opt.value = opt.textContent = name;
+            this.DOM.rootSelect.appendChild(opt);
+          }
+          if (ruleNames.includes(previous))
+            this.DOM.rootSelect.value = previous;
+          else if (ruleNames.includes("root"))
+            this.DOM.rootSelect.value = "root";
+          else if (ruleNames[0]) this.DOM.rootSelect.value = ruleNames[0];
+          this.state.previousRuleNames = ruleNames.slice();
+        },
+
+        renderGrammarError(message) {
+          this.DOM.results.innerHTML = `
+          <div class="card">
+            <div class="card-head"><h2>Grammar Error</h2><span class="bad-text">blocked</span></div>
+            <div class="card-body">
+              <div class="kv">
+                <div class="k">Problem</div><div class="v bad-text mono">${Utils.htmlEscape(message)}</div>
+                <div class="k">Hint</div><div class="v">Check portable llama.cpp/XGrammar syntax: rule names, double-quoted literals, character classes, and defined rule references.</div>
+              </div>
+            </div>
+          </div>`;
+        },
+
+        renderSuccess(result, root, grammar) {
+          const input = this.editors.input.getValue();
+          const lines = input.length ? input.split("\n").length : 1;
+          this.DOM.results.innerHTML = `
+          <div class="card">
+            <div class="card-head"><h2>Result</h2><span class="ok-text">complete match</span></div>
+            <div class="card-body">
+              <div class="kv">
+                <div class="k">Start rule</div><div class="v mono">${Utils.htmlEscape(root)}</div>
+                <div class="k">Consumed</div><div class="v mono">${input.length} chars across ${lines} line${lines === 1 ? "" : "s"}</div>
+                <div class="k">Rules</div><div class="v mono">${grammar.ruleOrder.length}</div>
+              </div>
             </div>
           </div>
-        </div>`;
-    }
+          <div class="card">
+            <div class="card-head"><h2>Parse Tree</h2><span class="hint">rule spans</span></div>
+            <div class="card-body tree">${this.formatTree(result.tree, input)}</div>
+          </div>`;
+        },
 
-    function renderSuccess(result, root, grammar) {
-      const input = inputEditor.getValue();
-      const lines = input.length ? input.split("\n").length : 1;
-      resultsEl.innerHTML = `
-        <div class="card">
-          <div class="card-head"><h2>Result</h2><span class="ok-text">complete match</span></div>
-          <div class="card-body">
-            <div class="kv">
-              <div class="k">Start rule</div><div class="v mono">${htmlEscape(root)}</div>
-              <div class="k">Consumed</div><div class="v mono">${input.length} chars across ${lines} line${lines === 1 ? "" : "s"}</div>
-              <div class="k">Rules</div><div class="v mono">${grammar.ruleOrder.length}</div>
+        renderFailure(result, root, grammar) {
+          const err = result.error;
+          const input = this.editors.input.getValue();
+          const expected = err.expected
+            .slice(0, 28)
+            .map(
+              (item) => `<span class="chip">${Utils.htmlEscape(item)}</span>`,
+            )
+            .join("");
+          const more =
+            err.expected.length > 28
+              ? `<span class="chip">+${err.expected.length - 28} more</span>`
+              : "";
+          this.DOM.results.innerHTML = `
+          <div class="card">
+            <div class="card-head"><h2>${result.limited ? "Analysis Limit" : "Parse Failure"}</h2><span class="${result.limited ? "warn-text" : "bad-text"}">${result.limited ? "state limit reached" : "stopped at first impossible point"}</span></div>
+            <div class="card-body">
+              <div class="kv">
+                <div class="k">Start rule</div><div class="v mono">${Utils.htmlEscape(root)}</div>
+                <div class="k">Location</div><div class="v mono">line ${err.lineCol.line}, column ${err.lineCol.col} · index ${err.index}</div>
+                <div class="k">Found</div><div class="v bad-text mono">${Utils.htmlEscape(err.found)}</div>
+                <div class="k">Expected</div><div class="v"><div class="expected-list">${expected}${more}</div></div>
+              </div>
             </div>
           </div>
-        </div>
-        <div class="card">
-          <div class="card-head"><h2>Parse Tree</h2><span class="hint">rule spans</span></div>
-          <div class="card-body tree">${formatTree(result.tree, input)}</div>
-        </div>`;
-    }
+          <div class="card">
+            <div class="card-head"><h2>Best Partial Parse</h2><span class="hint">farthest candidate</span></div>
+            <div class="card-body ${result.partialTree ? "tree" : "mini-note"}">${result.partialTree ? this.formatTree(result.partialTree, input) : "No rule could match from the beginning of the input."}</div>
+          </div>`;
+        },
 
-    function renderFailure(result, root, grammar) {
-      const error = result.error;
-      const expected = error.expected.slice(0, 28).map(item => `<span class="chip">${htmlEscape(item)}</span>`).join("");
-      const more = error.expected.length > 28 ? `<span class="chip">+${error.expected.length - 28} more</span>` : "";
-      const heading = result.limited ? "Analysis Limit" : "Parse Failure";
-      const state = result.limited ? "state limit reached before a complete match was found" : "stopped at first impossible point";
-      const limitNote = result.limited
-        ? " The matcher hit its local state cap while preserving browser responsiveness, so this is not proof that llama.cpp or XGrammar would reject the input. Simplify the grammar or test the case with the runtime validator."
-        : "";
-      resultsEl.innerHTML = `
-        <div class="card">
-          <div class="card-head"><h2>${heading}</h2><span class="${result.limited ? "warn-text" : "bad-text"}">${state}</span></div>
-          <div class="card-body">
-            <div class="kv">
-              <div class="k">Start rule</div><div class="v mono">${htmlEscape(root)}</div>
-              <div class="k">Location</div><div class="v mono">line ${error.lineCol.line}, column ${error.lineCol.col} · index ${error.index}</div>
-              <div class="k">Found</div><div class="v bad-text mono">${htmlEscape(error.found)}</div>
-              <div class="k">Expected</div><div class="v"><div class="expected-list">${expected}${more}</div></div>
-            </div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-head"><h2>Best Partial Parse</h2><span class="hint">farthest candidate</span></div>
-          <div class="card-body ${result.partialTree ? "tree" : "mini-note"}">${result.partialTree ? formatTree(result.partialTree, inputEditor.getValue()) : "No rule could match from the beginning of the input."}</div>
-        </div>
-        <div class="card">
-          <div class="card-head"><h2>Debugging Notes</h2></div>
-          <div class="card-body mini-note">
-            The matcher requires the whole input to match. If the failure is at the end, your grammar likely matched a valid prefix and then expected another token. If it fails on spaces/newlines, add explicit whitespace rules; GBNF does not skip input whitespace automatically.${limitNote}
-          </div>
-        </div>`;
-    }
+        formatTree(tree, input, depth = 0) {
+          if (!tree) return "";
+          const indent = "  ".repeat(depth);
+          const range = `<span class="range">[${tree.start}, ${tree.end}]</span>`;
 
-    function formatTree(tree, input, depth = 0) {
-      if (!tree) return "";
-      const indent = "  ".repeat(depth);
-      const range = `<span class="range">[${tree.start}, ${tree.end}]</span>`;
+          // Grab our new partial flag to style the failure path
+          const isPartial = tree.partial;
+          const status = isPartial
+            ? ` <span class="bad-text">← failed</span>`
+            : "";
+          const colorClass = isPartial ? "bad-text" : "lit";
 
-      if (tree.type === "rule") {
-        const text = preview(input.slice(tree.start, tree.end));
-        const childLines = (tree.children || []).map(child => formatTree(child, input, depth + 1)).filter(Boolean).join("\n");
-        return `${indent}<span class="name">${htmlEscape(tree.name)}</span> ${range} <span class="lit">${htmlEscape(text)}</span>${childLines ? "\n" + childLines : ""}`;
-      }
+          if (tree.type === "rule") {
+            const childLines = (tree.children || [])
+              .map((child) => this.formatTree(child, input, depth + 1))
+              .filter(Boolean)
+              .join("\n");
+            const nameClass = isPartial ? "name bad-text" : "name";
+            return `${indent}<span class="${nameClass}">${Utils.htmlEscape(tree.name)}</span> ${range} <span class="${colorClass}">${Utils.htmlEscape(Utils.preview(input.slice(tree.start, tree.end)))}</span>${status}${childLines ? "\n" + childLines : ""}`;
+          }
+          if (tree.type === "literal") {
+            return `${indent}<span class="${colorClass}">literal ${Utils.htmlEscape(Utils.quoteForDisplay(tree.value))}</span> ${range}${status}`;
+          }
+          if (tree.type === "class") {
+            // Partial class matches might not have a .value yet, so handle it safely
+            const val = tree.value
+              ? ` → ${Utils.htmlEscape(Utils.quoteForDisplay(tree.value))}`
+              : "";
+            return `${indent}<span class="${colorClass}">class ${Utils.htmlEscape(tree.raw)}${val}</span> ${range}${status}`;
+          }
+          if (tree.type === "repeat") {
+            const childLines = (tree.children || [])
+              .map((child) => this.formatTree(child, input, depth + 1))
+              .filter(Boolean)
+              .join("\n");
+            return `${indent}<span class="name">repeat ${Utils.htmlEscape(tree.label)}</span> ${range}${status}${childLines ? "\n" + childLines : ""}`;
+          }
+          if (tree.type === "seq" || tree.type === "alt") {
+            return (tree.children || [])
+              .map((child) => this.formatTree(child, input, depth))
+              .filter(Boolean)
+              .join("\n");
+          }
+          return "";
+        },
+      };
 
-      if (tree.type === "literal") {
-        return `${indent}<span class="lit">literal ${htmlEscape(quoteForDisplay(tree.value))}</span> ${range}`;
-      }
-
-      if (tree.type === "class") {
-        return `${indent}<span class="lit">class ${htmlEscape(tree.raw)} → ${htmlEscape(quoteForDisplay(tree.value))}</span> ${range}`;
-      }
-
-      if (tree.type === "repeat") {
-        const childLines = (tree.children || []).map(child => formatTree(child, input, depth + 1)).filter(Boolean).join("\n");
-        return `${indent}<span class="name">repeat ${htmlEscape(tree.label)}</span> ${range}${childLines ? "\n" + childLines : ""}`;
-      }
-
-      if (tree.type === "seq" || tree.type === "alt") {
-        return (tree.children || []).map(child => formatTree(child, input, depth)).filter(Boolean).join("\n");
-      }
-
-      return "";
-    }
-
-    function preview(text) {
-      const escaped = text.replace(/\n/g, "\\n").replace(/\t/g, "\\t");
-      return escaped.length > 42 ? escaped.slice(0, 39) + "…" : escaped;
-    }
-
-    // Kick off the first parse once CodeMirror has measured its panes.
-    setTimeout(runDebugger, 0);
-  </script>
-</body>
+      // Boot App
+      document.addEventListener("DOMContentLoaded", () => App.init());
+    </script>
+  </body>
 </html>
