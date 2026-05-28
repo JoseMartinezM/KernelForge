@@ -1,0 +1,29 @@
+# we 'anchor' the model into generating python by priming it with the markdown code block
+# note: this only helps for instruct models, base models should generate python directly.
+root ::= "```python\n" triton_module "\n```"
+
+identifier ::= [a-zA-Z_]+
+ws ::= [ \t]*
+indent ::= "    "
+
+triton_module ::= imports extra_funcs jit_decorator func_def
+
+imports ::= (
+    "import triton\n"
+    "import triton.language as tl\n"
+    "import torch\n\n"
+)
+
+jit_decorator ::= "@triton.jit\n"
+extra_funcs ::= (jit_decorator? func_def)*
+
+func_def ::= "def " identifier "(" ws params ws "):" "\n" block_1
+stmt_end ::= ";" ws | "\n"
+params ::= "" | param ( "," param )+
+param ::= identifier (":" identifier)?
+statement ::= simple_stmt stmt_end
+simple_stmt ::= simple_assignment | "pass"
+
+simple_assignment ::= identifier ws "=" ws identifier
+
+block_1 ::= (indent statement)+
