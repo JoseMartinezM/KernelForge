@@ -1816,6 +1816,7 @@
               if (
                 this.state.vimEnabled &&
                 !cm.state.vim?.insertMode &&
+                !cm.state.vim?.insertMode &&
                 !cm.state.vim?.visualMode
               ) {
                 Clipboard.paste(cm);

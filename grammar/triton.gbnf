@@ -1,29 +1,116 @@
-# we 'anchor' the model into generating python by priming it with the markdown code block
-# note: this only helps for instruct models, base models should generate python directly.
-root ::= "```python\n" triton_module "\n```"
+# ===============
+# ROOT
+# ===============
+# A Python file is a sequence of level-0 statements or empty lines.
+root ::= (stmt-lvl0-body | empty-line)+
 
-identifier ::= [a-zA-Z_]+
-ws ::= [ \t]*
-indent ::= "    "
+# ===============
+# 1. ATOMIC ELEMENTS
+# ===============
+identifier ::= [a-zA-Z_] [a-zA-Z0-9_]*
+number     ::= "-"? [0-9]+ ("." [0-9]+)?
+# Simple string matching for both quote styles, avoiding complex escape sequences for the base
+string     ::= ["] [^"]* ["] | ['] [^']* [']
 
-triton_module ::= imports extra_funcs jit_decorator func_def
+ws         ::= [ \t]*
+ws-nl      ::= [ \t\n]*
+empty-line ::= ws "\n"
 
-imports ::= (
-    "import triton\n"
-    "import triton.language as tl\n"
-    "import torch\n\n"
-)
+# ===============
+# 2. EXPRESSIONS
+# ===============
+# func-call is prioritized before identifier to prevent greedy masking
+expr      ::= string | number | func-call | identifier
+func-call ::= identifier ws "(" ws-nl call-args ws-nl ")"
+call-args ::= (expr (ws-nl "," ws-nl expr)* (ws-nl ",")?)?
 
-jit_decorator ::= "@triton.jit\n"
-extra_funcs ::= (jit_decorator? func_def)*
+# ===============
+# 3. SIMPLE STATEMENTS
+# ===============
+simple-stmts ::= simple-stmt (ws ";" ws simple-stmt)* ws (";" ws)? "\n"
+simple-stmt  ::= assignment | return-stmt | import-stmt | pass-stmt | expr
+assignment   ::= identifier ws "=" ws expr
+return-stmt  ::= "return" (ws expr)?
+pass-stmt    ::= "pass"
 
-func_def ::= "def " identifier "(" ws params ws "):" "\n" block_1
-stmt_end ::= ";" ws | "\n"
-params ::= "" | param ( "," param )+
-param ::= identifier (":" identifier)?
-statement ::= simple_stmt stmt_end
-simple_stmt ::= simple_assignment | "pass"
+import-stmt ::= import-name | import-from
+import-name ::= "import" ws dotted-as-names
 
-simple_assignment ::= identifier ws "=" ws identifier
+dotted-as-names ::= dotted-as-name ( ws "," ws dotted-as-name )*
+dotted-as-name ::= dotted-name (ws "as" ws identifier)*
+dotted-name ::= identifier ( ws "." ws identifier )*
 
-block_1 ::= (indent statement)+
+import-from ::= "from" ws dotted-name ws "import" ws import-from-targets
+import-from-targets  ::= "(" ws-nl import-from-as-names ( ws-nl ","? ) ws-nl ")" | import-from-as-names | "*"
+import-from-as-names ::= import-from-as-name ( ws-nl "," ws-nl import-from-as-name )*
+import-from-as-name ::= identifier ( ws "as" ws identifier )?
+
+# ===============
+# 4. COMPOUND STATEMENT HEADERS (Function Defs & Parameters)
+# ===============
+# Stub grammar for types
+type-stub ::= identifier
+
+# Parameters: supports `name` or `name: type`, and optional trailing commas
+param       ::= identifier (ws-nl ":" ws-nl type-stub)?
+params      ::= (param (ws-nl "," ws-nl param)* (ws-nl ",")?)?
+
+# We extract headers so the indentation layers can cleanly wrap them
+func-header ::= "def" ws identifier ws "(" ws-nl params ws-nl ")" ws-nl ("->" ws-nl type-stub ws-nl)? ":" ws
+if-header   ::= "if" ws expr ws ":" ws
+
+
+# ===============
+# 5. INDENTATION LAYERS (UNROLLED SCOPE)
+# ===============
+# Pattern to copy-paste for Level N:
+# - Define `indentN`
+# - Define `block-lvlN` requiring at least one non-empty body statement
+# - Define compound statements that drop into `block-lvl{N+1}`
+
+# ---------------
+# LEVEL 0 (0 spaces)
+# ---------------
+stmt-lvl0-body     ::= simple-stmts-lvl0 | compound-stmt-lvl0
+simple-stmts-lvl0  ::= simple-stmts
+compound-stmt-lvl0 ::= func-def-lvl0 | if-stmt-lvl0
+
+func-def-lvl0      ::= func-header "\n" block-lvl1
+if-stmt-lvl0       ::= if-header "\n" block-lvl1
+
+# ---------------
+# LEVEL 1 (4 spaces)
+# ---------------
+indent1            ::= "    "
+# Enforce that a block has at least one actual statement, interspersed with empty lines
+block-lvl1         ::= empty-line* stmt-lvl1-body (stmt-lvl1-body | empty-line)*
+
+stmt-lvl1-body     ::= simple-stmts-lvl1 | compound-stmt-lvl1
+simple-stmts-lvl1  ::= indent1 simple-stmts
+compound-stmt-lvl1 ::= func-def-lvl1 | if-stmt-lvl1
+
+func-def-lvl1      ::= indent1 func-header "\n" block-lvl2
+if-stmt-lvl1       ::= indent1 if-header "\n" block-lvl2
+
+# ---------------
+# LEVEL 2 (8 spaces)
+# ---------------
+indent2            ::= "        "
+block-lvl2         ::= empty-line* stmt-lvl2-body (stmt-lvl2-body | empty-line)*
+
+stmt-lvl2-body     ::= simple-stmts-lvl2 | compound-stmt-lvl2
+simple-stmts-lvl2  ::= indent2 simple-stmts
+compound-stmt-lvl2 ::= func-def-lvl2 | if-stmt-lvl2
+
+func-def-lvl2      ::= indent2 func-header "\n" block-lvl3
+if-stmt-lvl2       ::= indent2 if-header "\n" block-lvl3
+
+# ---------------
+# LEVEL 3 (12 spaces - LEAF NODE)
+# ---------------
+# To prevent needing Level 4, compound statements are omitted at the deepest level.
+indent3            ::= "            "
+block-lvl3         ::= empty-line* stmt-lvl3-body (stmt-lvl3-body | empty-line)*
+
+stmt-lvl3-body     ::= simple-stmts-lvl3
+simple-stmts-lvl3  ::= indent3 simple-stmts
