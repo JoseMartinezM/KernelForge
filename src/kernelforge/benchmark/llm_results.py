@@ -7,7 +7,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
-from .llm_inference import DEFAULT_LLM_CONFIG_PATH, load_llm_config
+DEFAULT_LLM_CONFIG_PATH = Path(__file__).with_name("llm_models.json")
 
 
 def load_jsonl(path: str | Path) -> list[dict[str, Any]]:
@@ -143,6 +143,8 @@ def analysis_rows(
     config_path: str | Path = DEFAULT_LLM_CONFIG_PATH,
 ) -> list[dict[str, Any]]:
     """Flatten raw ledger rows into a table suitable for Marimo display/filtering."""
+    from .llm_inference import load_llm_config
+
     config = load_llm_config(config_path) if config is None else config
     table = []
     for row_number, row in enumerate(rows, start=1):
@@ -196,8 +198,8 @@ def summarize_analysis(table: Iterable[dict[str, Any]]) -> dict[str, Any]:
         "rows": len(rows),
         "successes": sum(row.get("status") == "success" for row in rows),
         "failures": sum(row.get("status") == "failed" for row in rows),
-        "truncated": sum(row.get("truncated") for row in rows),
-        "syntax_ok": sum(row.get("syntax_ok") for row in rows),
+        "truncated": sum(1 for row in rows if row.get("truncated")),
+        "syntax_ok": sum(1 for row in rows if row.get("syntax_ok")),
         "syntax_error": sum(not row.get("syntax_ok") for row in rows),
         "torch_call_rows": sum((row.get("torch_call_count") or 0) > 0 for row in rows),
         "prompt_tokens": sum(row.get("prompt_tokens") or 0 for row in rows),

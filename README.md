@@ -1,579 +1,154 @@
+# KernelForge
 
-# KernelForge GPU Kernel Generator
+KernelForge is a research monorepo for improving LLM generation of Triton
+GPU kernels with constrained generation and validation. The repo combines
+benchmark tooling, exploratory notebooks, grammar experiments, a course LEX/YACC
+compiler component, inference backend experiments, and the planned
+kernel-development agent loop.
 
-## Visión del proyecto
+The current project is research-first.
+Reusable Python code lives under `src/kernelforge`; notebooks and scripts are
+interfaces around that package.
 
-Sistema que usa LLMs guiados por gramáticas formales (EBNF + XGrammar) para generar
-kernels GPU en Triton con tres niveles de optimización garantizados. El usuario describe
-la operación que necesita; el sistema genera, valida y entrega el kernel correcto y
-eficiente automáticamente, con fallback inteligente entre niveles si la optimización
-más alta falla.
+## Project goals
 
-**Problema que resuelve:** Los ingenieros de ML/IA escriben kernels GPU que funcionan
-pero son 10–30x más lentos de lo que podrían ser. Optimizarlos manualmente requiere
-expertos escasos y caros. Este sistema democratiza la generación de kernels óptimos.
+- Measure how different LLMs perform on niche Triton kernel generation tasks.
+- Validate generated kernels against known-good Triton kernels and their expected
+  values before treating results as usable benchmark data.
+- Design constrained-generation grammars that make invalid or non-existent Triton
+  APIs harder for the model to emit.
+- Build toward a differentiator: an agent loop for developing kernels. The
+  current candidate is **Pi Agent**, whose architecture and plugin system need to
+  be studied for compatibility with KernelForge's validation goals.
+- Ship a first MVP validation loop with a basic semantic checker before expanding
+  the agent workflow.
+- Implement a LEX/YACC syntax validator for the course requirement.
+- Keep benchmark, inference, evaluation, and notebook workflows reproducible.
 
----
+## Current direction
 
-## Stack tecnológico
+The next milestone is not a broad product surface. It is a validated kernel
+development loop:
 
-### Backend
-- **Python 3.11+**
-- **FastAPI** — API REST y WebSockets para streaming de generación
-- **XGrammar** — constrained decoding, aplica gramáticas EBNF sobre el LLM
-- **Triton 2.x** — compilación y ejecución de kernels GPU generados
-- **PyTorch** — manejo de tensores y lanzamiento de kernels
-- **Ollama** — LLMs open source locales (CodeLlama, DeepSeek-Coder)
-- **Anthropic SDK** — Claude API como alternativa al LLM local
-- **Pydantic v2** — validación de schemas y modelos de datos
-- **pytest** — testing del pipeline de generación y validación
+1. Generate candidate Triton kernels.
+2. Run a basic semantic checker over obvious Triton mistakes.
+3. Validate candidates against known-good kernels and values.
+4. Record benchmark results in reproducible ledgers.
 
-### Frontend
-- **React 18 + TypeScript** — UI principal
-- **Vite** — bundler y dev server
-- **Tailwind CSS** — estilos utilitarios
-- **Monaco Editor** — editor de código con syntax highlighting para Triton/Python
-- **Recharts** — visualización de métricas de rendimiento (speedup, compilación)
-- **React Query** — manejo de estado async y caché de generaciones
+Pi Agent is the main agent-loop option to evaluate. The evaluation should focus
+on whether its plugin system can call KernelForge benchmark loaders, semantic
+checks, constrained decoding, and validation steps without forcing a large repo
+reshaping.
 
-### Infraestructura
-- **Docker + Docker Compose** — contenedores para back y front
-- **Google Colab** — ejecución GPU durante desarrollo (T4 gratuita)
-- **NVIDIA CUDA 11.8+** — requerido para Triton en GPU local
+The constrained-decoding backend is still being selected. The working choice is
+**LLGuidance**, because it supports unit-testable grammars against strings and has
+capabilities closer to XGrammar than plain GBNF-only paths. Important caveat:
+using LLGuidance through llama.cpp requires a custom llama.cpp build with
+`-DLLAMA_LLGUIDANCE=ON` and a Rust toolchain. That is easy enough locally, but it
+must be made reproducible and cost-conscious on Modal before it becomes the
+default inference path. XGrammar is less attractive right now because its Python
+path is tied to Hugging Face models and its production paths such as vLLM or
+SGLang complicate a low-cost Modal setup. Plain llama.cpp GBNF remains useful,
+but there is no clean reference Python parser library for testing the grammar
+against Triton examples before inference.
 
----
+## Repository map
 
-## Arquitectura del sistema
-
-```
-Usuario
-   │
-   ▼
-┌─────────────────────────────────────────┐
-│  Frontend React                          │
-│  - Selector de operación                 │
-│  - Selector de nivel de optimización     │
-│  - Editor Monaco (código generado)       │
-│  - Dashboard de métricas                 │
-└───────────────┬─────────────────────────┘
-                │ HTTP / WebSocket
-                ▼
-┌─────────────────────────────────────────┐
-│  FastAPI Backend                         │
-│                                          │
-│  POST /generate                          │
-│  GET  /metrics/{job_id}                  │
-│  WS   /stream/{job_id}                   │
-│                                          │
-│  ┌─────────────────────────────────┐    │
-│  │  GenerationPipeline              │    │
-│  │                                  │    │
-│  │  1. PromptBuilder                │    │
-│  │  2. GrammarSelector (L1/L2/L3)   │    │
-│  │  3. LLMRunner (Ollama | Claude)  │    │
-│  │     + XGrammar constrained       │    │
-│  │  4. KernelValidator              │    │
-│  │     - compilación Triton         │    │
-│  │     - ejecución en GPU           │    │
-│  │     - corrección vs CPU          │    │
-│  │  5. FallbackHandler              │    │
-│  │     L3 falla → intenta L2 → L1   │    │
-│  │  6. MetricsCollector             │    │
-│  └─────────────────────────────────┘    │
-└─────────────────────────────────────────┘
-                │
-                ▼
-        GPU (Colab T4 / local)
-        Triton compila PTX → SASS
-        Kernel corre en paralelo
+```text
+.
+├── compiler/                # Course LEX/YACC syntax-validator home
+├── docs/                    # Onboarding, evaluation, architecture notes
+├── grammar/                 # GBNF grammar assets and viewers
+├── notebooks/               # Marimo exploration and visualization notebooks
+├── scripts/                 # Operational one-file scripts, e.g. Modal inference
+├── src/kernelforge/         # Installable reusable Python package
+│   ├── benchmark/           # TritonBench loaders, prompts, inference, results
+│   └── grammar/             # Python grammar/constrained-generation utilities
+├── tests/                   # Future CPU-first test suites
+├── apps/                    # Future agent-loop adapters and multi-file surfaces
+├── vendor/TritonBench/      # Vendored upstream benchmark data/scripts
+└── runs/                    # Generated ledgers/results; git-ignored
 ```
 
-### Flujo de generación con fallback
+For the rationale behind these boundaries, see `docs/architecture.md`.
 
-```
-Prompt → GrammarL3 → LLM → Kernel
-                              │
-                    ┌─────────┴─────────┐
-                    │   Validación       │
-                    └─────────┬─────────┘
-                         pasa │   falla
-                              │      │
-                              ▼      ▼
-                           Éxito   GrammarL2 → LLM → Kernel
-                                                        │
-                                              ┌─────────┴──────┐
-                                              │   Validación    │
-                                              └─────────┬──────┘
-                                                   pasa │  falla
-                                                        │      │
-                                                        ▼      ▼
-                                                     Éxito   GrammarL1 → ...
-```
-
----
-
-## Estructura de directorios
-
-```
-grammarforge/
-│
-├── CLAUDE.md                          # Este archivo
-├── README.md
-├── docker-compose.yml
-├── .env.example
-│
-├── backend/
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   ├── pyproject.toml
-│   │
-│   ├── app/
-│   │   ├── main.py                    # FastAPI app, routers, CORS
-│   │   ├── config.py                  # Settings (LLM provider, GPU config)
-│   │   │
-│   │   ├── api/
-│   │   │   ├── __init__.py
-│   │   │   ├── routes/
-│   │   │   │   ├── generate.py        # POST /generate — pipeline completo
-│   │   │   │   ├── metrics.py         # GET /metrics/{job_id}
-│   │   │   │   ├── stream.py          # WS /stream — generación en tiempo real
-│   │   │   │   └── health.py          # GET /health
-│   │   │   └── schemas/
-│   │   │       ├── generation.py      # GenerateRequest, GenerateResponse
-│   │   │       └── metrics.py         # MetricsResponse, BenchmarkResult
-│   │   │
-│   │   ├── core/
-│   │   │   ├── __init__.py
-│   │   │   ├── pipeline.py            # GenerationPipeline — orquesta todo
-│   │   │   ├── prompt_builder.py      # Construye prompts por operación
-│   │   │   ├── fallback_handler.py    # Lógica de degradación L3→L2→L1
-│   │   │   └── metrics_collector.py  # Recolecta y persiste métricas
-│   │   │
-│   │   ├── grammars/
-│   │   │   ├── __init__.py
-│   │   │   ├── base.py                # Clase base Grammar
-│   │   │   ├── level1_basic.py        # Gramática sintaxis correcta
-│   │   │   ├── level2_coalesced.py    # + memory coalescing, BLOCK_SIZE 2^n
-│   │   │   ├── level3_tiled.py        # + tiling, shared memory
-│   │   │   └── grammar_selector.py    # Elige gramática por nivel y operación
-│   │   │
-│   │   ├── llm/
-│   │   │   ├── __init__.py
-│   │   │   ├── base_runner.py         # Interfaz abstracta LLMRunner
-│   │   │   ├── ollama_runner.py       # Implementación Ollama + XGrammar
-│   │   │   ├── claude_runner.py       # Implementación Claude API
-│   │   │   └── xgrammar_wrapper.py    # Integración XGrammar con runners
-│   │   │
-│   │   └── validation/
-│   │       ├── __init__.py
-│   │       ├── validator.py           # Orquesta las 3 capas de validación
-│   │       ├── compile_check.py       # Capa 1: Triton compile()
-│   │       ├── execution_check.py     # Capa 2: lanzar kernel, verificar no crash
-│   │       └── correctness_check.py   # Capa 3: resultado GPU == CPU
-│   │
-│   └── tests/
-│       ├── test_grammars.py
-│       ├── test_pipeline.py
-│       ├── test_validation.py
-│       └── test_api.py
-│
-├── frontend/
-│   ├── Dockerfile
-│   ├── package.json
-│   ├── vite.config.ts
-│   ├── tsconfig.json
-│   ├── tailwind.config.ts
-│   │
-│   └── src/
-│       ├── main.tsx
-│       ├── App.tsx
-│       │
-│       ├── components/
-│       │   ├── GeneratorPanel/
-│       │   │   ├── OperationSelector.tsx   # Dropdown: suma, matmul, reducción
-│       │   │   ├── LevelSelector.tsx       # L1 / L2 / L3 con descripción
-│       │   │   ├── LLMSelector.tsx         # Ollama | Claude API
-│       │   │   └── GenerateButton.tsx
-│       │   │
-│       │   ├── CodeViewer/
-│       │   │   ├── KernelEditor.tsx        # Monaco con el kernel generado
-│       │   │   ├── GenerationSteps.tsx     # Pasos del pipeline en tiempo real
-│       │   │   └── FallbackBadge.tsx       # Muestra si hubo fallback L3→L2
-│       │   │
-│       │   ├── MetricsDashboard/
-│       │   │   ├── SpeedupChart.tsx        # Barra: GPU vs CPU speedup
-│       │   │   ├── CompilationRate.tsx     # % compilaciones exitosas por nivel
-│       │   │   ├── LevelComparison.tsx     # L1 vs L2 vs L3 side by side
-│       │   │   └── FallbackStats.tsx       # Cuántas veces cayó cada nivel
-│       │   │
-│       │   └── shared/
-│       │       ├── Badge.tsx
-│       │       ├── LoadingSpinner.tsx
-│       │       └── ErrorCard.tsx
-│       │
-│       ├── hooks/
-│       │   ├── useGeneration.ts            # React Query para POST /generate
-│       │   ├── useMetrics.ts               # Polling de métricas
-│       │   └── useStream.ts                # WebSocket hook para streaming
-│       │
-│       ├── services/
-│       │   └── api.ts                      # Axios client, endpoints tipados
-│       │
-│       └── types/
-│           ├── generation.ts
-│           └── metrics.ts
-│
-├── notebooks/
-│   ├── 01_grammar_exploration.ipynb       # Diseño y prueba de gramáticas
-│   ├── 02_kernel_benchmarks.ipynb         # Comparativa L1/L2/L3 en Colab
-│   └── 03_experiments_paper.ipynb         # 50 generaciones para el paper
-│
-└── paper/
-    ├── main.tex
-    └── figures/
-```
-
----
-
-## Gramáticas — diseño por niveles
-
-### Nivel 1 — Básico (sintaxis válida)
-```ebnf
-kernel      ::= imports decorator funcdef
-imports     ::= "import triton" newline "import triton.language as tl" newline
-decorator   ::= "@triton.jit" newline
-funcdef     ::= "def " identifier "(" params "):" newline body
-params      ::= param ("," param)*
-param       ::= identifier (":" type_hint)?
-body        ::= pid_stmt offsets_stmt mask_stmt load_stmts compute_stmt store_stmt
-pid_stmt    ::= identifier " = tl.program_id(axis=0)" newline
-offsets_stmt::= identifier " = " identifier " * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)" newline
-mask_stmt   ::= identifier " = " identifier " < " identifier newline
-load_stmt   ::= identifier " = tl.load(" expr ", mask=" identifier ")" newline
-store_stmt  ::= "tl.store(" expr ", " identifier ", mask=" identifier ")" newline
-```
-
-### Nivel 2 — Coalesced (memory coalescing forzado)
-Extiende Nivel 1 y agrega:
-```ebnf
-block_size_decl ::= "BLOCK_SIZE: tl.constexpr"
-block_size_val  ::= "64" | "128" | "256" | "512" | "1024"
-offsets_pattern ::= "pid * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)"
-```
-La gramática solo permite este patrón de offsets exacto, garantizando
-que hilos adyacentes accedan a posiciones contiguas de memoria.
-
-### Nivel 3 — Tiled (shared memory + tiling)
-Extiende Nivel 2 y agrega:
-```ebnf
-shared_alloc ::= identifier " = tl.zeros([BLOCK_SIZE], dtype=" dtype ")" newline
-tile_loop    ::= "for " identifier " in range(0, " identifier ", BLOCK_SIZE):" newline tile_body
-tile_body    ::= shared_load tile_compute barrier
-barrier      ::= "tl.debug_barrier()" newline
-```
-
----
-
-## Variables de entorno (.env)
+## Setup
 
 ```bash
-# LLM Provider: "ollama" | "claude"
-LLM_PROVIDER=ollama
-
-# Ollama
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=codellama:13b
-
-# Claude API (solo si LLM_PROVIDER=claude)
-ANTHROPIC_API_KEY=sk-ant-...
-CLAUDE_MODEL=claude-sonnet-4-20250514
-
-# GPU
-CUDA_VISIBLE_DEVICES=0
-TRITON_CACHE_DIR=/tmp/triton_cache
-
-# App
-BACKEND_PORT=8000
-FRONTEND_PORT=5173
-MAX_GENERATION_ATTEMPTS=3
+uv sync
 ```
 
----
-
-## Operaciones GPU soportadas (v1)
-
-| Operación | Descripción | Paralelismo |
-|---|---|---|
-| `vector_add` | Suma elemento a elemento | 1 hilo por elemento |
-| `vector_mul` | Multiplicación elemento a elemento | 1 hilo por elemento |
-| `dot_product` | Producto punto de dos vectores | Reducción paralela |
-| `matrix_scale` | Escalar una matriz por constante | 1 hilo por elemento |
-
-Estas cuatro operaciones son suficientes para demostrar los tres niveles
-de optimización y generar resultados publicables en el paper.
-
----
-
-## Métricas del experimento (paper)
-
-Para cada operación × nivel de gramática × LLM, se registra:
-
-- `compilation_success` (bool) — ¿compiló sin error?
-- `execution_success` (bool) — ¿corrió sin crash?
-- `correctness` (bool) — ¿resultado GPU == CPU con tolerancia 1e-5?
-- `speedup` (float) — tiempo CPU / tiempo GPU
-- `generation_attempts` (int) — intentos hasta éxito (fallback)
-- `tokens_generated` (int) — longitud del kernel
-- `grammar_level_achieved` (int) — nivel final logrado (puede bajar por fallback)
-
-Mínimo 50 generaciones por condición para significancia estadística.
-
----
-
-## User Stories
-
-### US-01 — Ingeniero de ML en empresa de IA
-**Como** ingeniero de ML que necesita un kernel GPU para una operación
-personalizada de atención en mi modelo,
-**quiero** describir la operación en lenguaje natural y recibir un kernel
-Triton optimizado listo para producción,
-**para** no tener que esperar semanas a que un experto en GPU lo escriba
-manualmente ni pagar $200k/año por ese experto.
-
-**Criterios de aceptación:**
-- El sistema genera el kernel en menos de 60 segundos
-- El kernel compila sin modificaciones
-- El speedup sobre CPU es al menos 10x para N > 1M elementos
-- El nivel de optimización alcanzado se muestra claramente en la UI
-
----
-
-### US-02 — Equipo de MLOps con pipeline automatizado
-**Como** ingeniero de MLOps que mantiene un pipeline de CI/CD para
-despliegue de modelos,
-**quiero** que el sistema intente generar el kernel más optimizado posible
-y, si falla, degrade automáticamente al siguiente nivel sin intervención,
-**para** que el pipeline nunca se rompa por un kernel que no compiló y
-siempre tengamos al menos un kernel funcional desplegado.
-
-**Criterios de aceptación:**
-- Si el nivel 3 falla, el sistema intenta nivel 2 automáticamente
-- Si nivel 2 falla, intenta nivel 1
-- El nivel final alcanzado queda registrado en el log con razón del fallback
-- El tiempo total incluyendo reintentos no supera 3 minutos
-- La API retorna el mejor kernel logrado junto con metadata del fallback
-
----
-
-### US-03 — Investigador científico sin experiencia en GPU
-**Como** investigador de bioinformática que necesita procesar millones de
-secuencias genómicas,
-**quiero** generar un kernel GPU para mi operación de comparación sin
-necesitar aprender Triton ni CUDA,
-**para** reducir el tiempo de mis experimentos de 45 minutos a segundos
-y poder iterar más rápido en mi investigación.
-
-**Criterios de aceptación:**
-- El usuario puede describir la operación en términos de su dominio
-- El sistema genera y valida el kernel sin que el usuario vea código
-- Se muestra el speedup real medido en sus datos
-- El kernel generado es exportable como archivo .py listo para usar
-
----
-
-### US-04 — Startup de IA optimizando costos en la nube
-**Como** CTO de una startup que gasta $30k/mes en GPUs en AWS,
-**quiero** reemplazar nuestros kernels escritos manualmente con kernels
-generados al nivel 3 de optimización,
-**para** reducir el tiempo de cómputo y bajar nuestra factura de GPU
-sin contratar más ingenieros especializados.
-
-**Criterios de aceptación:**
-- El sistema puede procesar un batch de operaciones distintas
-- Las métricas de speedup se reportan por operación
-- Los kernels generados son compatibles con PyTorch y el stack existente
-- El ROI estimado (horas GPU ahorradas) se muestra en el dashboard
-
----
-
-### US-05 — Profesor o investigador evaluando el sistema
-**Como** evaluador académico del proyecto,
-**quiero** ver una comparativa clara entre kernels generados sin gramática
-versus con gramática en niveles 1, 2 y 3,
-**para** verificar que la gramática tiene un impacto real y medible en
-la calidad y rendimiento del código generado.
-
-**Criterios de aceptación:**
-- El dashboard muestra las 4 condiciones (sin gramática, L1, L2, L3)
-- Las métricas incluyen tasa de compilación, corrección y speedup
-- Los resultados son reproducibles con el mismo seed
-- El código de los kernels generados es inspeccionable en la UI
-
----
-
-## Comandos de desarrollo
+For local ROCm/PyTorch/Triton execution:
 
 ```bash
-# Levantar todo con Docker
-docker-compose up --build
-
-# Solo backend en desarrollo
-cd backend
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
-
-# Solo frontend en desarrollo
-cd frontend
-npm install
-npm run dev
-
-# Correr experimentos del paper en Colab
-# Abrir notebooks/02_kernel_benchmarks.ipynb en Google Colab
-# Activar GPU: Runtime → Change runtime type → T4 GPU
-
-# Tests
-cd backend
-pytest tests/ -v
+uv sync --extra rocm
 ```
 
----
+If you use Nix/NixOS:
 
-## Nota sobre XGrammar y Claude API
+```bash
+nix develop .#default
+# or, for local ROCm execution
+nix develop .#rocm
+```
 
-XGrammar opera sobre el modelo de forma local, controlando la distribución
-de probabilidad de los tokens en tiempo real. Por esto:
+## Common commands
 
-- **Con Ollama (recomendado para desarrollo):** XGrammar funciona nativamente
-  porque tienes acceso al modelo local.
-- **Con Claude API:** La API no expone control de logits, por lo que XGrammar
-  no puede aplicarse directamente. En este caso, Claude se usa como baseline
-  de comparación (generación sin gramática) o se implementa post-processing
-  de validación estructural sobre la salida.
+```bash
+# List configured inference models
+uv run python -m kernelforge.benchmark.llm_inference --list-models
 
-Para el experimento principal del paper, usar Ollama + CodeLlama con XGrammar.
-Claude API sirve como baseline de "LLM sin restricciones".
+# One-row dry run against the configured benchmark prompt builder
+uv run python -m kernelforge.benchmark.llm_inference \
+  --model lightning-ai/gemma-4-31B-it \
+  --limit 1 \
+  --dry-run \
+  --dry-run-preview 1
 
----
+# Modal Gemma backend
+uv run modal serve scripts/modal_vllm.py
 
-## Feedback recibido — puntos a tener en cuenta
+# Interactive notebooks
+uv run marimo edit notebooks/grammar.py
+uv run marimo edit notebooks/tritonbench.py
 
-Estos puntos surgieron de una revisión externa del proyecto y deben guiar decisiones de diseño e implementación:
+# Static checks
+uv run ruff check .
+uv run basedpyright
+```
 
-### 1. El fallback automático es válido — mantenerlo
-El mecanismo de auto-fallback L3→L2→L1 fue valorado positivamente. Es una fortaleza del sistema y debe seguir siendo la estrategia central para garantizar siempre un kernel funcional.
+Use `kernelforge.benchmark` for reusable benchmark imports and CLI entry points.
 
-### 2. Las reglas de cada nivel deben ser intercambiables
-Las reglas/patrones que se aplican en cada nivel actualmente están fijas (e.g., el patrón de coalescing exacto en L2, tiling en L3). Esto es un problema: puede haber otras buenas prácticas igualmente válidas que la gramática bloquea.
+## Credentials
 
-**Acción pendiente:** Diseñar los módulos de gramática (`level2_coalesced.py`, `level3_tiled.py`) de forma que las reglas sean configurables o intercambiables, no hardcodeadas. La clase base `Grammar` en `grammars/base.py` debe facilitar esto. El objetivo es poder swapear o extender las reglas de un nivel sin reescribir la gramática entera.
+Set only the provider credentials needed for the workflow you are running:
 
-### 3. Clarificar cuándo usar L3 vs niveles inferiores
-No siempre tiene sentido intentar L3 primero. Los patrones de L2 y L3 (coalescing, tiling, shared memory) son beneficiosos en operaciones memory-bound con acceso regular, pero pueden ser innecesarios o contraproducentes en kernels simples o con patrones de acceso irregulares.
+```bash
+export LIGHTNING_API_KEY="..."
+export MODAL_API_KEY="..."      # or MODAL_API_TOKEN
+export MODAL_API_SECRET="..."
+export GOOGLE_API_KEY="..."     # older Google AI Studio notebook path only
+```
 
-**Acción pendiente:** Documentar (y opcionalmente implementar en el sistema) criterios explícitos para cuándo recomendar L3 vs L2 vs L1 como punto de partida. Ejemplo: operaciones de reducción o con dependencias entre hilos pueden no beneficiarse del tiling de L3. El `GrammarSelector` debería poder recibir hints sobre el tipo de operación para elegir el nivel inicial más adecuado.
+Keep local `.env*` files uncommitted.
 
-### 4. Incluir resultados de testing reales en la documentación y el paper
-El evaluador señaló que falta evidencia empírica del comportamiento del fallback. Se espera incluir datos concretos como:
+## Current stable entry points
 
-> "En nuestras pruebas, L3 falló y cayó a L2 aproximadamente 2 de cada 10 veces para `vector_add`. Para `dot_product`, la tasa de fallback fue mayor (~4/10)."
+- `kernelforge.benchmark.tritonbench`: TritonBench-T loading, prompt construction,
+  generated-code cleanup, and lightweight local evaluation helpers.
+- `kernelforge.benchmark.llm_inference`: resumable OpenAI-compatible batch
+  inference CLI over TritonBench-T simple tasks.
+- `kernelforge.benchmark.llm_results`: JSONL loading, syntax metrics, cost
+  estimates, and notebook-friendly tables.
+- `scripts/modal_vllm.py`: Modal deployment for the Gemma 4 E4B vLLM backend.
+- `grammar/triton.gbnf`: current grammar experiment. The selected backend may
+  require translating or replacing this with an LLGuidance-compatible grammar.
 
-**Acción pendiente:** Al correr los experimentos del paper (`notebooks/02_kernel_benchmarks.ipynb`), registrar y reportar explícitamente las tasas de fallback por operación y nivel. Incluir esta tabla en el paper y en el dashboard de métricas (`FallbackStats.tsx`).
+Generated inference and evaluation ledgers should go under `runs/`.
 
----
+## More documentation
 
-## Roadmap del semestre
-
-| Semana | Entregable |
-|---|---|
-| 1–2 | Setup del proyecto, Triton funcionando en Colab, primera gramática L1 |
-| 3–4 | Pipeline básico: LLM → gramática → kernel → compilación. Video 1 |
-| 5–6 | Gramáticas L2 y L3, fallback handler, métricas básicas. Video 2 |
-| 7–8 | Frontend completo, dashboard de métricas, experimentos del paper. Video 3 |
-| 9–10 | 50 generaciones por condición, análisis estadístico, redacción paper |
-| 11–12 | Pulido, demo final, preparación defensa oral |
-=======
-# TritonBench
-
-TritonBench features two distinct channels: **TritonBench-G** and **TritonBench-T**, each with its own evaluation framework. For detailed information, refer to the paper [TRITONBENCH: Benchmarking Large Language Model Capabilities for Generating Triton Operators](https://arxiv.org/pdf/2502.14752).
-
-## Data
-- **TritonBench-G** offers two versions of Alpaca-format instructions: 
-  - Simple instruction: `TritonBench_G_simp_alpac_v1.json`
-  - Complex instruction: `TritonBench_G_comp_alpac_v1.json`
-- It also includes executable folders (`TritonBench_G_v1`) and associated statistics (`TritonBench_G_v1.json`).
-- **TritonBench-T** offers two versions of Alpaca-format instructions: 
-  - Simple instruction: `TritonBench_T_simp_alpac_v1.json`
-  - Complex instruction: `TritonBench_T_comp_alpac_v1.json`
-- It also includes executable folders (`TritonBench_T_v1`) and associated statistics (`TritonBench_T_v1.json`).
-- Additionally, there are two sets of filtered GitHub data:
-  - `train_crawl.json` (4024 entries) – de-duplicated using BERT score similarity.
-  - `train_synth.json` (4133 entries) – data synthesized using Jiuci.
-- The combined 8k dataset can be used for **RAG** (Retrieval-Augmented Generation).
-
-## LLM Generated
-We also provide the output results from all major models used in the paper.
-
-## Python Environment
-- `triton = 3.1.0`
-- `torch >= 2.5.1`
-- After installation, update the `py_interpreter` paths in `eval_G` and `eval_T`.
-
-## Evaluation Process
-### TritonBench-G
-1. **Code Similarity Evaluation**: First, use **CodeBLEU** to evaluate code similarity. For detailed instructions, refer to `../readme_4similarity.md`.
-2. **Execution Accuracy**: 
-    - Run `0_call_acc.py` with the following command:
-    ```bash
-    0_call_acc.py --source source/path/or/folder --target target/path/or/folder --GPUs [0,1,2,3]
-    ```
-    - Multiple GPUs can accelerate the execution.
-3. **Execution Performance**: 
-    - Run `1_exe_acc.py` with:
-    ```bash
-    1_exe_acc.py --folder root/of/multiple/folders/or/folder --GPUs [0,1,2,3]
-    ```
-4. **Efficiency**: 
-    - First run the correctly executable operators and get the performance:
-    ```bash
-    cd performance_metrics/perf_G
-    python run_bench/write_file.py --input_folder_path /folder/of/pyfiles --results_path /folder/of/output/results
-    python run_bench/multiprocess_gpu_run.py
-    ```
-    - Finally, run `2_efficiency.py` to evaluate the performance:
-    ```bash
-    cd EVAL/eval_G
-    python 2_efficiency.py --gen_folder /folder/of/output/results
-    ```
-
-### TritonBench-T
-For **TritonBench-T**, there is no code similarity evaluation. Only call accuracy, execution accuracy, and speedup are assessed. The process is similar:
-1. Run `0_call_acc.py` as above:
-    ```bash
-    0_call_acc.py --source source/path/or/folder --target target/path/or/folder --GPUs [0,1,2,3]
-    ```
-2. Run `1_exe_acc.py` with the appropriate folders and GPUs:
-    ```bash
-    1_exe_acc.py --folder root/of/multiple/folders/or/folder --GPUs [0,1,2,3]
-    ```
-3. Get the performance and evaluate
-    - First run the correctly executable operators and get the performance:
-    ```bash
-    cd performance_metrics/perf_T
-    python run_bench/write_file.py --input_folder_path /folder/of/pyfiles --results_path /folder/of/output/results
-    python run_bench/multiprocess_gpu_run.py
-    ```
-    - Finally, run `2_efficiency.py` to evaluate the performance:
-    ```bash
-    cd EVAL/eval_T
-    python 2_efficiency.py --gen_folder /folder/of/output/results
-    ```
-
-**Note**: Ensure that accuracy and efficiency evaluations are performed sequentially.
-
-## Hugging face
-We have published our dataset on [Hugging Face](https://huggingface.co/collections/LiShangZ/tritonbench-67c0016bc8a8654cfd612a1a).
-
-## 📩 Contact Us
-If you have any questions, feel free to reach out to us at:  
-**✉️ Email:** [qshi9510@gmail.com]
->>>>>>> d5a1965 (Squashed 'vendor/TritonBench/' content from commit 603e28a)
+- `docs/onboarding.md`: detailed setup, provider, inference, and troubleshooting
+  workflow.
+- `docs/evaluate.md`: Colab/local evaluation notes for generated kernels.
+- `docs/architecture.md`: monorepo boundaries and migration rule.

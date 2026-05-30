@@ -1,10 +1,10 @@
 """
-Evaluacion de kernels LLM contra TritonBench.
+Evaluate LLM kernels against TritonBench.
 
-Requiere: Linux + GPU + PyTorch + Triton
-Guarda resultados en: notebooks/results/eval_results.json
+Requires: Linux + GPU + PyTorch + Triton
+Saves results to: notebooks/results/eval_results.json
 
-Instrucciones Google Colab:
+Google Colab instructions:
     !git clone https://github.com/JoseMartinezM/KernelForge.git
     import os; os.chdir("KernelForge")
     !pip install triton -q
@@ -25,32 +25,32 @@ DATA_DIR = NOTEBOOKS_DIR / "data"
 TRITONBENCH_ROOT = PROJECT_ROOT / "vendor" / "TritonBench"
 OUTPUT_PATH = RESULTS_DIR / "eval_results.json"
 
-sys.path.insert(0, str(NOTEBOOKS_DIR))
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from benchmark import evaluate_entry, load_jsonl, load_t_simple_entries
+from kernelforge.benchmark import evaluate_entry, load_jsonl, load_t_simple_entries  # noqa: E402
 
 
 def main() -> None:
     RESULTS_DIR.mkdir(exist_ok=True)
 
-    print("Cargando dataset TritonBench...")
+    print("Loading TritonBench dataset...")
     T_simple, errors, _, _ = load_t_simple_entries(TRITONBENCH_ROOT)
     entries_by_file = {entry["file"]: entry for entry in T_simple}
     entries_by_index = {i: entry for i, entry in enumerate(T_simple)}
-    print(f"  {len(T_simple)} entries, {len(errors)} errores de matching")
+    print(f"  {len(T_simple)} entries, {len(errors)} matching errors")
 
     jsonl_paths = sorted(DATA_DIR.glob("*.jsonl"))
     if not jsonl_paths:
-        print(f"ERROR: No hay archivos .jsonl en {DATA_DIR}")
+        print(f"ERROR: no .jsonl files found in {DATA_DIR}")
         sys.exit(1)
 
     raw_results: list[dict] = []
     for path in jsonl_paths:
         rows = load_jsonl(path)
-        print(f"  {path.name}: {len(rows)} resultados")
+        print(f"  {path.name}: {len(rows)} results")
         raw_results.extend(rows)
 
-    print(f"\nEvaluando {len(raw_results)} kernels...\n")
+    print(f"\nEvaluating {len(raw_results)} kernels...\n")
 
     eval_results = []
     model_stats: dict[str, dict] = {}

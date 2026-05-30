@@ -1,8 +1,24 @@
 # KernelForge onboarding
 
-KernelForge is a research workspace for generating and evaluating Triton GPU kernels with LLMs. It is not packaged as an application yet; the reliable entry points are the `uv`-managed Python environment, the `notebooks.benchmark` Python modules, the vendored TritonBench dataset/evaluation code, and a small set of marimo notebooks for inspection.
+KernelForge is a research workspace for generating, constraining, and validating Triton GPU kernels with LLMs. It is not packaged as an application yet; the reliable entry points are the `uv`-managed Python environment, the `kernelforge.benchmark` Python modules, the vendored TritonBench dataset/evaluation code, and a small set of marimo notebooks for inspection.
 
 Run commands from the repository root unless a command explicitly says otherwise. Most paths in the benchmark helpers are relative to the repo root.
+
+## Current project direction
+
+The next milestone is a validated kernel-development loop. Candidate kernels
+should be checked with a basic semantic checker, validated against known-good
+Triton kernels and values, and written to reproducible benchmark ledgers. Pi
+Agent is the main orchestration candidate to study; its architecture and plugin
+system must be evaluated before adding project adapters under `apps/`.
+
+The constrained-decoding backend is also still a design choice. LLGuidance is the
+current preferred option because it supports unit-testable grammars against test
+strings and has capabilities close enough to XGrammar for the planned Triton
+grammar. The main caveat is deployment: llama.cpp must be custom-compiled with
+`-DLLAMA_LLGUIDANCE=ON` and a Rust toolchain. That is straightforward locally,
+but it must be made reproducible and cost-conscious on Modal before it becomes
+the default path.
 
 ## Prerequisites
 
@@ -20,11 +36,12 @@ Run commands from the repository root unless a command explicitly says otherwise
 
 - `pyproject.toml` / `uv.lock`: base Python environment. Base dependencies include marimo, OpenAI, Modal, numpy, ruff, basedpyright, and ipykernel.
 - `pyproject.toml` extra `rocm`: AMD ROCm PyTorch/Triton wheels from the PyTorch ROCm index for local Triton execution.
-- `notebooks/benchmark/llm_inference.py`: CLI and helper functions for batch LLM inference over TritonBench-T tasks.
-- `notebooks/benchmark/llm_models.json`: provider/model registry, generation defaults, provider auth metadata, and Lightning pricing metadata.
-- `notebooks/benchmark/tritonbench.py`: dataset loading, prompt construction, generated-code cleanup, and lightweight local call/execution eval helpers.
-- `notebooks/benchmark/llm_results.py`: JSONL result loading, cost estimates, syntax/code metrics, and summary table helpers.
+- `src/kernelforge/benchmark/llm_inference.py`: CLI and helper functions for batch LLM inference over TritonBench-T tasks.
+- `src/kernelforge/benchmark/llm_models.json`: provider/model registry, generation defaults, provider auth metadata, and Lightning pricing metadata.
+- `src/kernelforge/benchmark/tritonbench.py`: dataset loading, prompt construction, generated-code cleanup, and lightweight local call/execution eval helpers.
+- `src/kernelforge/benchmark/llm_results.py`: JSONL result loading, cost estimates, syntax/code metrics, and summary table helpers.
 - `scripts/modal_vllm.py`: Modal deployment for the Gemma 4 E4B vLLM OpenAI-compatible backend.
+- `apps/`: future agent-loop adapters once the Pi Agent compatibility study is complete.
 - `notebooks/compare_models.py`: older marimo comparison notebook that still uses a Google AI Studio client alongside Lightning models.
 - `vendor/TritonBench`: vendored benchmark data, upstream generated outputs, upstream evaluation scripts, and performance metrics.
 - `flake.nix`: optional Nix development shells that provide `uv` and, in the `rocm` shell, ROCm tools/libraries.
@@ -71,8 +88,8 @@ $env:GOOGLE_API_KEY = "..."
 Quick sanity checks:
 
 ```bash
-uv run python -m notebooks.benchmark.llm_inference --list-models
-uv run python -m notebooks.benchmark.llm_inference \
+uv run python -m kernelforge.benchmark.llm_inference --list-models
+uv run python -m kernelforge.benchmark.llm_inference \
   --model lightning-ai/gemma-4-31B-it \
   --limit 1 \
   --dry-run \
@@ -97,18 +114,18 @@ uv sync --extra rocm         # ROCm dependencies
 
 ## Running LLM inference batches
 
-`notebooks.benchmark.llm_inference` loads the TritonBench-T simple task set, builds prompts, calls a configured OpenAI-compatible model, and appends one JSON object per request to a JSONL ledger.
+`kernelforge.benchmark.llm_inference` loads the TritonBench-T simple task set, builds prompts, calls a configured OpenAI-compatible model, and appends one JSON object per request to a JSONL ledger.
 
 List configured models:
 
 ```bash
-uv run python -m notebooks.benchmark.llm_inference --list-models
+uv run python -m kernelforge.benchmark.llm_inference --list-models
 ```
 
 Do a one-row dry run:
 
 ```bash
-uv run python -m notebooks.benchmark.llm_inference \
+uv run python -m kernelforge.benchmark.llm_inference \
   --model lightning-ai/gemma-4-31B-it \
   --limit 1 \
   --dry-run \
@@ -118,7 +135,7 @@ uv run python -m notebooks.benchmark.llm_inference \
 Run a small Lightning smoke test:
 
 ```bash
-uv run python -m notebooks.benchmark.llm_inference \
+uv run python -m kernelforge.benchmark.llm_inference \
   --model lightning-ai/gemma-4-31B-it \
   --limit 1 \
   --max-tokens 128 \
@@ -134,7 +151,7 @@ uv run python -m notebooks.benchmark.llm_inference \
 Run the current Lightning Gemma 4 31B full-batch shape conservatively:
 
 ```bash
-uv run python -m notebooks.benchmark.llm_inference \
+uv run python -m kernelforge.benchmark.llm_inference \
   --model lightning-ai/gemma-4-31B-it \
   --max-tokens 4000 \
   --temperature 0 \
@@ -178,12 +195,12 @@ For a persistent deployment:
 uv run modal deploy scripts/modal_vllm.py
 ```
 
-If Modal prints a different web URL than the one currently in `notebooks/benchmark/llm_models.json`, update the `modal.url` value before running `llm_inference` against it.
+If Modal prints a different web URL than the one currently in `src/kernelforge/benchmark/llm_models.json`, update the `modal.url` value before running `llm_inference` against it.
 
 ### 3. Check endpoint wiring
 
 ```bash
-uv run python -m notebooks.benchmark.llm_inference \
+uv run python -m kernelforge.benchmark.llm_inference \
   --model google/gemma-4-E4B-it \
   --limit 1 \
   --max-tokens 128 \
@@ -204,7 +221,7 @@ The first call can include Modal/vLLM startup time. Use a high timeout for smoke
 The current Modal container is configured for eight concurrent web inputs. A validated full-batch shape is:
 
 ```bash
-uv run python -m notebooks.benchmark.llm_inference \
+uv run python -m kernelforge.benchmark.llm_inference \
   --model google/gemma-4-E4B-it \
   --max-tokens 8000 \
   --temperature 0 \
@@ -218,9 +235,32 @@ uv run python -m notebooks.benchmark.llm_inference \
 
 The Modal provider currently has no project-side request/token rate limiter. Bound concurrency with `--max-workers` and keep it at or below the Modal app's `@modal.concurrent(max_inputs=...)` setting unless you are intentionally stress-testing.
 
+## Constrained decoding notes
+
+Do not assume the current `grammar/triton.gbnf` file is the final inference
+format. The selected backend must support tests that feed Triton kernel strings
+to the grammar and assert accept/reject behavior before running inference.
+
+Current backend notes:
+
+- XGrammar is powerful, but its practical Python path targets Hugging Face models
+  and its production-engine path points toward systems such as vLLM or SGLang,
+  which makes a low-cost Modal setup harder.
+- Plain llama.cpp GBNF remains useful for local experiments, but the project does
+  not currently have a clean Python reference parser library for validating the
+  grammar against fixtures.
+- LLGuidance is the preferred candidate. For llama.cpp integration, build with
+  `-DLLAMA_LLGUIDANCE=ON`; this also requires Rust and `cargo`. Before relying on
+  it in Modal, check for maintained prebuilt binaries/images or a community Modal
+  recipe. If none exists, prototype a custom image and measure startup/build cost.
+
+Grammar fixtures should account for constrained decoding limitations around
+Python indentation. Prefer explicit 4-space literals and bounded nesting rather
+than virtual `INDENT`/`DEDENT` tokens.
+
 ## Evaluating generated kernels
 
-For lightweight local checks, use `notebooks.benchmark.tritonbench.evaluate_entry` directly from Python. This runs the generated code and the reference code with the TritonBench test code, then compares saved outputs.
+For lightweight local checks, use `kernelforge.benchmark.tritonbench.evaluate_entry` directly from Python. This runs the generated code and the reference code with the TritonBench test code, then compares saved outputs.
 
 Example random subset eval:
 
@@ -228,7 +268,7 @@ Example random subset eval:
 uv run python - <<'PY'
 import json, random
 from pathlib import Path
-from notebooks.benchmark.tritonbench import evaluate_entry, load_t_simple_entries
+from kernelforge.benchmark.tritonbench import evaluate_entry, load_t_simple_entries
 
 ledger = Path("runs/tritonbench/modal-gemma4-e4b-t-simple-max8000-temp0.jsonl")
 out = Path("runs/tritonbench/modal-gemma4-e4b-random10-eval.jsonl")
@@ -278,7 +318,7 @@ uv sync
 uv sync --extra rocm
 
 # List configured inference models
-uv run python -m notebooks.benchmark.llm_inference --list-models
+uv run python -m kernelforge.benchmark.llm_inference --list-models
 
 # Static checks
 uv run ruff check .
