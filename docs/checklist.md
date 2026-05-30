@@ -1,119 +1,135 @@
-# KernelForge — Checklist de pendientes
+# KernelForge checklist
 
-Cada ítem corresponde a un **issue en GitHub**. Antes de empezar algo, abre el issue,
-asígnatelo y pon la referencia en el PR. Cuando termines, márcalo como hecho aquí con
-`[x]` y cierra el issue.
-
----
-
-## Gramática GBNF
-
-- [ ] **Completar `triton.gbnf` con elementos Triton-específicos**
-  - Decoradores (`@triton.jit`)
-  - Operadores binarios en expresiones (`+`, `*`, `<`, `==`, `//`)
-  - `for` loops (necesario para tile loops)
-  - Tipo `tl.constexpr` en parámetros (`BLOCK_SIZE: tl.constexpr`)
-  - Llamadas calificadas (`tl.load`, `tl.store`, `tl.arange`, `tl.program_id`, `tl.zeros`)
-
-- [ ] **Validar gramática contra kernels reales de TritonBench**
-  - La gramática debe aceptar todos los kernels de referencia en `vendor/TritonBench/data/TritonBench_G_v1/`
-  - Documentar cualquier caso que no acepta y decidir si es un bug de la gramática o del kernel
+Each item should correspond to a GitHub issue. Before starting work, open the
+issue, assign it to yourself, and reference it in the PR. When the work lands,
+mark the item as `[x]` here and close the issue.
 
 ---
 
-## XGrammar — Integración con inferencia
+## Kernel-development agent loop
 
-- [ ] **Conectar `triton.gbnf` al pipeline de inferencia**
-  - Agregar modo `--grammar` / `--no-grammar` a `notebooks/benchmark/llm_inference.py`
-  - XGrammar solo aplica a backends que exponen logits (Ollama / llama.cpp); documentar limitación con Lightning y Modal
-  - Registrar en el JSONL de resultados si la generación usó gramática o no (`grammar_constrained: bool`)
+- [ ] **Evaluate Pi Agent as the main agent-loop candidate**
+  - Study its architecture, extension points, and plugin system.
+  - Confirm whether plugins can call KernelForge benchmark loaders, semantic
+    checks, constrained decoding, and validation commands.
+  - Document compatibility risks before adding adapters under `apps/`.
 
-- [ ] **Prueba de humo: generación constringida con un modelo local**
-  - Correr al menos 1 kernel con XGrammar activo y verificar que el output es Python válido
-
----
-
-## Semantic Checker (chequeos post-generación)
-
-- [ ] **Implementar `notebooks/benchmark/semantic_checker.py`**
-  - `tl.load(...)` sin argumento `mask=`
-  - `tl.store(...)` sin argumento `mask=`
-  - Función kernel sin decorador `@triton.jit`
-  - `BLOCK_SIZE` usado sin anotación `tl.constexpr`
-  - Ausencia de `tl.program_id` (kernel sin pid)
-  - Devolver lista de warnings, no rechazar el kernel
-
-- [ ] **Integrar semantic checker en el pipeline de evaluación**
-  - Llamar al checker sobre cada kernel generado antes de pasarlo a TritonBench EVAL
-  - Guardar `semantic_warnings: list[str]` en el JSONL de resultados
+- [ ] **Design the MVP validation loop**
+  - Input: a TritonBench task and a generated candidate kernel.
+  - Steps: semantic check, known-good value validation, benchmark metrics, ledger
+    write.
+  - Output: a compact result object that an agent plugin can consume.
 
 ---
 
-## Métricas y tabla del paper
+## Validated benchmarks
 
-- [ ] **Columna "con gramática" vs "sin gramática" en la tabla de resultados**
-  - Para cada modelo (GPT, DeepSeek, Gemma) correr batch con y sin XGrammar
-  - Comparar `call@1`, `exe@1`, speedup
+- [ ] **Map known-good kernels and values**
+  - Identify the reference TritonBench kernels and golden values used for the
+    first validation set.
+  - Keep GPU-dependent execution opt-in, but make metadata and fixture loading
+    testable on CPU.
 
-- [ ] **Tabla de semantic warnings más frecuentes por modelo**
-  - ¿Qué anti-patrones genera cada LLM con más frecuencia?
-  - Agregar columna en `notebooks/evaluate/visualize.py`
-
-- [ ] **Script para generar tabla del paper automáticamente**
-  - Input: `runs/tritonbench/*.jsonl`
-  - Output: tabla markdown / CSV lista para copiar al paper
-
----
-
-## Frontend
-
-- [ ] **Setup del proyecto React**
-  - Vite + TypeScript + Tailwind CSS
-  - Estructura de carpetas: `frontend/src/`
-
-- [ ] **Monaco Editor — visualización del kernel generado**
-  - Syntax highlighting Python/Triton
-  - Read-only, se actualiza con cada generación
-
-- [ ] **Formulario de generación**
-  - Selector de operación (vector_add, attention, etc.)
-  - Selector de modelo
-  - Toggle XGrammar on/off
-  - Botón "Generar"
-
-- [ ] **Panel de resultados**
-  - Kernel generado (Monaco)
-  - Semantic warnings (lista)
-  - Métricas: call@1, exe@1, speedup
-  - Badge: "generado con gramática" / "sin gramática"
-
-- [ ] **Gráficas comparativas**
-  - Speedup con/sin gramática por operación (Recharts bar chart)
-  - Frecuencia de semantic warnings por modelo
+- [ ] **Define the validation ledger schema**
+  - Record generated code, model/provider metadata, semantic warnings, call
+    accuracy, execution accuracy, speedup when available, and validation errors.
+  - Store generated ledgers under `runs/`.
 
 ---
 
-## Backend API
+## Constrained-decoding backend selection
 
-- [ ] **FastAPI app (`backend/app/main.py`)**
-  - `POST /generate` — recibe operación + modelo + opciones, devuelve kernel + métricas
-  - `GET /models` — lista modelos disponibles
-  - CORS configurado para el frontend
+- [ ] **Finalize backend requirements**
+  - Must support unit tests against plain test strings containing Triton kernels.
+  - Must provide constrained-decoding capabilities close enough to XGrammar for
+    the planned grammar.
+  - Must be deployable for inference on Modal with minimal startup and usage
+    cost.
 
-- [ ] **Conectar pipeline completo en el endpoint `/generate`**
-  - Inferencia LLM → semantic checker → TritonBench eval → respuesta JSON
+- [ ] **Document the backend trade study**
+  - XGrammar: strong constrained decoding, but the practical Python path targets
+    Hugging Face models and production engines such as vLLM or SGLang add Modal
+    complexity and cost.
+  - Plain llama.cpp GBNF: useful for local experiments, but lacks a clean Python
+    reference parser library for testing the grammar against example kernels.
+  - LLGuidance: current preferred option because grammars can be unit-tested
+    against strings and integrated through llama.cpp, with the caveat below.
+
+- [ ] **Investigate reproducible LLGuidance deployment on Modal**
+  - llama.cpp must be compiled with `-DLLAMA_LLGUIDANCE=ON` and a Rust toolchain.
+  - Check whether a maintained prebuilt binary, image, or community Modal recipe
+    already exists.
+  - If not, prototype a custom Modal image and measure cold-start/build impact
+    before adopting LLGuidance as the default path.
+
+---
+
+## Grammar implementation and tests
+
+- [ ] **Update the Triton grammar for the selected backend**
+  - Include `@triton.jit` decorators.
+  - Include binary operators in expressions (`+`, `*`, `<`, `==`, `//`).
+  - Include `for` loops for tile loops.
+  - Include `tl.constexpr` parameter annotations (`BLOCK_SIZE: tl.constexpr`).
+  - Include qualified calls such as `tl.load`, `tl.store`, `tl.arange`,
+    `tl.program_id`, and `tl.zeros`.
+
+- [ ] **Validate the grammar against real TritonBench kernels**
+  - Add CPU-only grammar fixtures under `tests/grammar/`.
+  - Accept real Triton snippets and reject unrelated generic Python.
+  - Document every rejected reference kernel and decide whether the failure is a
+    grammar gap or an out-of-scope kernel pattern.
+  - Represent indentation with explicit 4-space literals and bounded nesting;
+    do not depend on virtual `INDENT`/`DEDENT` tokens.
+
+---
+
+## Semantic checker
+
+- [ ] **Implement a basic semantic checker in `src/kernelforge/`**
+  - Warn on `tl.load(...)` without `mask=`.
+  - Warn on `tl.store(...)` without `mask=`.
+  - Warn on kernel functions without `@triton.jit`.
+  - Warn on `BLOCK_SIZE` usage without a `tl.constexpr` annotation.
+  - Warn when no `tl.program_id` appears in the kernel.
+  - Return warnings; do not reject the kernel at this stage.
+
+- [ ] **Integrate semantic warnings into evaluation ledgers**
+  - Run the checker before TritonBench evaluation.
+  - Save `semantic_warnings: list[str]` in each JSONL result row.
+
+---
+
+## Metrics and paper tables
+
+- [ ] **Compare constrained and unconstrained generation**
+  - For each selected model, run batches with and without the selected grammar
+    backend.
+  - Compare `call@1`, `exe@1`, and speedup when execution data is available.
+
+- [ ] **Summarize frequent semantic warnings by model**
+  - Identify which Triton anti-patterns each LLM generates most often.
+  - Add a notebook/table path for warning counts.
+
+- [ ] **Generate paper-ready result tables automatically**
+  - Input: `runs/tritonbench/*.jsonl`.
+  - Output: Markdown and CSV tables ready to copy into the paper.
 
 ---
 
 ## Tests
 
-- [ ] **`tests/test_gbnf.py`** — la gramática acepta kernels válidos y rechaza Python genérico sin estructura Triton
-- [ ] **`tests/test_semantic_checker.py`** — detecta correctamente cada anti-patrón documentado
+- [ ] **`tests/grammar/` fixtures** — selected grammar accepts valid Triton kernels
+  and rejects unrelated generic Python.
+- [ ] **`tests/semantic_checker/` fixtures** — checker detects each documented
+  anti-pattern.
+- [ ] **`tests/benchmark/` fixtures** — benchmark loading, prompt construction,
+  result parsing, and validation metadata remain CPU-testable.
 
 ---
 
-## Instrucciones para el equipo
+## Team workflow
 
-1. Elige un ítem de esta lista que nadie tenga asignado.
-2. Abre un issue en GitHub con el mismo nombre del ítem.
-3. Marca el ítem como `[x]` en este archivo en el mismo PR.
+1. Pick an item from this list that nobody has assigned.
+2. Open a GitHub issue with the same item name.
+3. Mark the item as `[x]` in this file in the same PR that completes the work.

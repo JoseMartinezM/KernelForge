@@ -10,7 +10,7 @@ def _():
 
     import marimo as mo
 
-    from benchmark import (
+    from kernelforge.benchmark import (
         cleanup_generated_code,
         evaluate_entry,
         load_t_simple_entries,
@@ -181,7 +181,7 @@ def _(chosen_case, evaluate_llm_entry):
 
 @app.cell
 def _(chosen_eval_result):
-    if chosen_eval_result["pred"]["ok"] != True:
+    if not chosen_eval_result["pred"]["ok"]:
         print(chosen_eval_result["pred"]["stderr"])
     return
 

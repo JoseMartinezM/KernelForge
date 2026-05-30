@@ -11,7 +11,7 @@ def _():
 
     import marimo as mo
 
-    from benchmark import (
+    from kernelforge.benchmark import (
         evaluate_entry,
         load_jsonl,
         load_t_simple_entries,
@@ -127,10 +127,12 @@ def _(all_eval_results, defaultdict, mo):
 
     mo.vstack(
         [
-            mo.md("## TritonBench — Resultados por modelo"),
+            mo.md("## TritonBench — Results by model"),
             mo.md(
-                "**call@1**: el kernel corrió sin crash.  \n"
-                "**exe@1**: el output del kernel coincide con la referencia PyTorch."
+                "**call@1**: the kernel ran without crashing.  \n"
+                "**exe@1**: the kernel output matches the PyTorch reference.  \n"
+                "**mismatches**: differences detected when comparing `test_results` after both scripts run, "
+                "or evaluation wrapper errors when no subprocess `stderr` is available."
             ),
             mo.ui.table(_summary_rows),
         ]
@@ -139,12 +141,40 @@ def _(all_eval_results, defaultdict, mo):
 
 @app.cell(hide_code=True)
 def _(all_eval_results, mo):
+    def _stream_tail(text):
+        if not text:
+            return ""
+        lines = [line.strip() for line in str(text).splitlines() if line.strip()]
+        return lines[-1] if lines else ""
+
+    def _failure_source(ev):
+        pred = ev.get("pred") or {}
+        ref = ev.get("ref") or {}
+        if pred.get("stderr"):
+            return "pred.stderr"
+        if ref.get("stderr"):
+            return "ref.stderr"
+        if ev.get("mismatches"):
+            return "mismatches"
+        return ""
+
+    def _failure_reason(ev):
+        pred = ev.get("pred") or {}
+        ref = ev.get("ref") or {}
+        return (
+            _stream_tail(pred.get("stderr"))
+            or _stream_tail(ref.get("stderr"))
+            or "; ".join(ev.get("mismatches") or [])
+        )
+
     _detail_rows = [
         {
             "file": ev.get("file"),
             "model": ev.get("model_label") or ev.get("model"),
             "call@1": "✓" if ev.get("call@1") else "✗",
             "exe@1": "✓" if ev.get("exe@1") else "✗",
+            "failure source": _failure_source(ev),
+            "failure reason": _failure_reason(ev),
             "mismatches": "; ".join(ev.get("mismatches") or []),
         }
         for ev in all_eval_results
@@ -152,7 +182,7 @@ def _(all_eval_results, mo):
 
     mo.vstack(
         [
-            mo.md("## Detalle por kernel"),
+            mo.md("## Details by kernel"),
             mo.ui.table(_detail_rows),
         ]
     )

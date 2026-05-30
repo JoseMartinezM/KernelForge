@@ -1,11 +1,11 @@
 """
-Evaluacion de resultados LLM contra TritonBench.
-Corre en Google Colab con GPU o cualquier maquina Linux con PyTorch + Triton.
+Evaluate LLM results against TritonBench.
+Runs in Google Colab with a GPU or any Linux machine with PyTorch + Triton.
 
-Instrucciones Colab:
-  1. Subir el repo completo (o clonar desde GitHub)
-  2. !pip install triton torch  (Colab ya tiene torch, verificar triton)
-  3. Cambiar al directorio del repo: import os; os.chdir("KernelForge")
+Colab instructions:
+  1. Upload the full repo, or clone it from GitHub.
+  2. !pip install triton torch  (Colab already has torch; verify triton.)
+  3. Change to the repo directory: import os; os.chdir("KernelForge")
   4. !python notebooks/run_eval_colab.py
 """
 
@@ -15,37 +15,36 @@ import json
 import sys
 from pathlib import Path
 
-# Para que importe benchmark sin instalar el paquete
 NOTEBOOK_DIR = Path(__file__).resolve().parent
-sys.path.insert(0, str(NOTEBOOK_DIR))
-
-from benchmark import evaluate_entry, load_jsonl, load_t_simple_entries
-
 PROJECT_ROOT = NOTEBOOK_DIR.parent
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
+
+from kernelforge.benchmark import evaluate_entry, load_jsonl, load_t_simple_entries  # noqa: E402
+
 DATA_DIR = NOTEBOOK_DIR / "data"
 TRITONBENCH_ROOT = PROJECT_ROOT / "vendor" / "TritonBench"
 OUTPUT_PATH = NOTEBOOK_DIR / "eval_results.json"
 
 
 def main() -> None:
-    print("Cargando dataset TritonBench...")
+    print("Loading TritonBench dataset...")
     T_simple, errors, _, _ = load_t_simple_entries(TRITONBENCH_ROOT)
     entries_by_file = {entry["file"]: entry for entry in T_simple}
     entries_by_index = {i: entry for i, entry in enumerate(T_simple)}
-    print(f"  {len(T_simple)} entries cargados, {len(errors)} errores")
+    print(f"  {len(T_simple)} entries loaded, {len(errors)} errors")
 
     jsonl_paths = sorted(DATA_DIR.glob("*.jsonl"))
     if not jsonl_paths:
-        print(f"ERROR: No se encontraron archivos .jsonl en {DATA_DIR}")
+        print(f"ERROR: no .jsonl files found in {DATA_DIR}")
         sys.exit(1)
 
     raw_results: list[dict] = []
     for path in jsonl_paths:
         rows = load_jsonl(path)
-        print(f"  {path.name}: {len(rows)} resultados")
+        print(f"  {path.name}: {len(rows)} results")
         raw_results.extend(rows)
 
-    print(f"\nEvaluando {len(raw_results)} kernels...\n")
+    print(f"\nEvaluating {len(raw_results)} kernels...\n")
 
     eval_results = []
     model_stats: dict[str, dict] = {}
@@ -100,7 +99,7 @@ def main() -> None:
         print(f"[{i:3}/{len(raw_results)}] {model_label:20} {entry_file:50} {status}")
 
     print("\n" + "=" * 60)
-    print("RESULTADOS POR MODELO")
+    print("RESULTS BY MODEL")
     print("=" * 60)
     for label, s in sorted(model_stats.items()):
         n = s["total"]
@@ -113,7 +112,7 @@ def main() -> None:
 
     output = {"model_stats": model_stats, "per_kernel": eval_results}
     OUTPUT_PATH.write_text(json.dumps(output, indent=2), encoding="utf-8")
-    print(f"\nResultados guardados en: {OUTPUT_PATH}")
+    print(f"\nResults saved to: {OUTPUT_PATH}")
 
 
 if __name__ == "__main__":

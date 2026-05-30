@@ -10,6 +10,7 @@ import random
 import textwrap
 import time
 from collections import deque
+from collections.abc import Mapping
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from datetime import datetime, timezone
 from pathlib import Path
@@ -120,7 +121,7 @@ def model_generation_defaults(config: dict[str, Any], model: str) -> dict[str, A
     return dict(generation)
 
 
-def provider_token(provider: dict[str, Any], environ: dict[str, str] | None = None) -> str | None:
+def provider_token(provider: dict[str, Any], environ: Mapping[str, str] | None = None) -> str | None:
     """Resolve a provider token from the env var named by the provider's JSON 'token' field."""
     token_env = provider.get("token")
     if token_env is None:
@@ -141,7 +142,7 @@ def _provider_header_env_names(value: Any) -> list[str]:
 
 
 def provider_headers(
-    provider: dict[str, Any], environ: dict[str, str] | None = None
+    provider: dict[str, Any], environ: Mapping[str, str] | None = None
 ) -> dict[str, str]:
     """Resolve provider-specific HTTP headers from environment variables."""
     headers = provider.get("headers") or {}
@@ -767,6 +768,8 @@ def call_task(
                 "finished_at": _now_iso(),
                 "latency_s": time.monotonic() - start,
             }
+
+    raise RuntimeError("unreachable: call_task loop exhausted without returning")
 
 
 def run_batch(

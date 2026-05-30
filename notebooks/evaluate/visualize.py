@@ -27,8 +27,8 @@ def _(RESULTS_FILE, json, mo):
             True,
             mo.callout(
                 mo.md(
-                    f"No se encontró `{RESULTS_FILE.name}` en `notebooks/results/`.  \n"
-                    "Corre primero `notebooks/evaluate/run_eval.py` en una máquina Linux con GPU."
+                    f"Could not find `{RESULTS_FILE.name}` in `notebooks/results/`.  \n"
+                    "Run `notebooks/evaluate/run_eval.py` first on a Linux machine with a GPU."
                 ),
                 kind="warn",
             ),
@@ -36,7 +36,7 @@ def _(RESULTS_FILE, json, mo):
 
     _data = json.loads(RESULTS_FILE.read_text(encoding="utf-8"))
     per_kernel = _data["per_kernel"]
-    mo.md(f"Resultados cargados: **{len(per_kernel)} kernels** desde `{RESULTS_FILE.name}`")
+    mo.md(f"Loaded results: **{len(per_kernel)} kernels** from `{RESULTS_FILE.name}`")
     return (per_kernel,)
 
 
@@ -56,7 +56,7 @@ def _(defaultdict, mo, per_kernel):
         _n = _s["total"]
         _rows.append(
             {
-                "modelo": _label,
+                "model": _label,
                 "kernels": _n,
                 "call@1 ✓": _s["call_pass"],
                 "call@1 %": f"{100 * _s['call_pass'] / _n:.1f}%" if _n else "N/A",
@@ -67,10 +67,10 @@ def _(defaultdict, mo, per_kernel):
 
     mo.vstack(
         [
-            mo.md("## Resultados por modelo"),
+            mo.md("## Results by model"),
             mo.md(
-                "**call@1**: el kernel corrió sin crash.  \n"
-                "**exe@1**: el output coincide con la referencia PyTorch."
+                "**call@1**: the kernel ran without crashing.  \n"
+                "**exe@1**: the output matches the PyTorch reference."
             ),
             mo.ui.table(_rows),
         ]
@@ -81,8 +81,8 @@ def _(defaultdict, mo, per_kernel):
 def _(mo, per_kernel):
     _detail = [
         {
-            "archivo": ev.get("file"),
-            "modelo": ev.get("model_label") or ev.get("model"),
+            "file": ev.get("file"),
+            "model": ev.get("model_label") or ev.get("model"),
             "call@1": "✓" if ev.get("call@1") else "✗",
             "exe@1": "✓" if ev.get("exe@1") else "✗",
             "error": "; ".join(ev.get("mismatches") or []),
@@ -92,7 +92,7 @@ def _(mo, per_kernel):
 
     mo.vstack(
         [
-            mo.md("## Detalle por kernel"),
+            mo.md("## Details by kernel"),
             mo.ui.table(_detail),
         ]
     )

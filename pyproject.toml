@@ -1,8 +1,10 @@
 [project]
 name = "kernelforge"
 version = "0.1.0"
+description = "Research workspace for constrained Triton kernel generation and evaluation."
 requires-python = ">=3.11"
 dependencies = [
+    "altair>=6.1.0",
     "basedpyright>=1.39.4",
     "ipykernel>=7.2.0",
     "marimo>=0.23.6",
@@ -29,3 +31,18 @@ torch = [ { index = "pytorch-rocm", extra = "rocm" } ]
 torchvision = [ { index = "pytorch-rocm", extra = "rocm" } ]
 triton-rocm = [ { index = "pytorch-rocm", extra = "rocm" } ]
 
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/kernelforge"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.basedpyright]
+typeCheckingMode = "basic"
+include = ["src"]
+exclude = ["vendor", ".venv", ".direnv", "notebooks"]
+reportPrivateImportUsage = false

@@ -56,7 +56,8 @@ param       ::= identifier (ws-nl ":" ws-nl type-stub)?
 params      ::= (param (ws-nl "," ws-nl param)* (ws-nl ",")?)?
 
 # We extract headers so the indentation layers can cleanly wrap them
-func-header ::= "def" ws identifier ws "(" ws-nl params ws-nl ")" ws-nl ("->" ws-nl type-stub ws-nl)? ":" ws
+decorator ::= "@" ws dotted-name ws "\n"
+func-header ::= decorator? "def" ws identifier ws "(" ws-nl params ws-nl ")" ws-nl ("->" ws-nl type-stub ws-nl)? ":" ws
 if-header   ::= "if" ws expr ws ":" ws
 
 
@@ -114,3 +115,5 @@ block-lvl3         ::= empty-line* stmt-lvl3-body (stmt-lvl3-body | empty-line)*
 
 stmt-lvl3-body     ::= simple-stmts-lvl3
 simple-stmts-lvl3  ::= indent3 simple-stmts
+
+
