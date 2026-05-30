@@ -19,6 +19,7 @@ from typing import Any
 from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI
 
 from .tritonbench import DEFAULT_TRITONBENCH_ROOT, load_t_simple_entries, make_prompt
+from .semantic_checker import check_kernel
 
 DEFAULT_LLM_CONFIG_PATH = Path(__file__).with_name("llm_models.json")
 RATE_LIMIT_WINDOW_SECONDS = 60.0
@@ -723,6 +724,7 @@ def call_task(
                 "generation": task["generation"],
                 "messages": task["messages"],
                 "content": response_content(response),
+                "semantic_warnings": check_kernel(response_content(response)),
                 "response": response_to_dict(response),
                 "attempt": attempt,
                 "max_attempts": max_attempts,
@@ -755,6 +757,7 @@ def call_task(
                 "provider_url": task["provider_url"],
                 "generation": task["generation"],
                 "messages": task["messages"],
+                "semantic_warnings": [],
                 "error_type": type(exc).__name__,
                 "error_message": str(exc),
                 "retryable": retryable,
