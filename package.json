@@ -1,0 +1,8 @@
+{
+  "name": "kernelforge",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "latest"
+  }
+}
