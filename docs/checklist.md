@@ -8,17 +8,40 @@ mark the item as `[x]` here and close the issue.
 
 ## Kernel-development agent loop
 
-- [ ] **Evaluate Pi Agent as the main agent-loop candidate**
-  - Study its architecture, extension points, and plugin system.
-  - Confirm whether plugins can call KernelForge benchmark loaders, semantic
-    checks, constrained decoding, and validation commands.
-  - Document compatibility risks before adding adapters under `apps/`.
+- [x] **Evaluate Pi Agent as the main agent-loop candidate**
+  - Architecture: minimal TypeScript/Node.js harness, extensible via `.pi/extensions/*.ts`.
+  - Plugin system: `pi.registerTool()` registers tools the LLM can call; tools invoke
+    subprocesses via `pi.exec()`, so all existing Python CLIs are callable directly.
+  - SDK mode: `createAgentSession()` supports fully programmatic loops with custom tools,
+    no terminal UI required.
+  - Compatibility verdict: no blockers. Pi calls KernelForge Python commands as subprocesses.
+    Modal stays unchanged — Pi orchestrates locally and calls Modal via the existing CLI.
+  - Extra credential needed: `ANTHROPIC_API_KEY` for the Pi agent brain (separate from
+    Lightning and Modal keys already in use).
+  - Agent code goes under `apps/kernelforge-agent/` as a Pi package.
 
-- [ ] **Design the MVP validation loop**
-  - Input: a TritonBench task and a generated candidate kernel.
-  - Steps: semantic check, known-good value validation, benchmark metrics, ledger
-    write.
-  - Output: a compact result object that an agent plugin can consume.
+- [x] **Design the MVP validation loop**
+  - Workflow: generate kernel → semantic check → validate with GPU → write ledger.
+  - Input: a TritonBench task (entry_file + prompt).
+  - Steps: `generate_kernel` tool → `run_semantic_check` tool → `validate_kernel` tool →
+    `write_ledger` tool.
+  - Output: a JSONL row written to `runs/` with call@1, exe@1, semantic_warnings, and
+    model/provider metadata.
+  - Each step maps to one Pi tool in `apps/kernelforge-agent/extensions/`.
+
+- [ ] **Implement the agent tools in `apps/kernelforge-agent/`**
+  - [ ] `generate_kernel` — calls `uv run python -m kernelforge.benchmark.llm_inference`
+    with the task entry and returns the generated code.
+  - [ ] `run_semantic_check` — calls the semantic checker CLI once it exists in
+    `src/kernelforge/`; returns a list of warnings.
+  - [ ] `validate_kernel` — runs the generated kernel against the TritonBench reference
+    and returns call@1, exe@1, and mismatches. Requires GPU.
+    - [ ] Create `scripts/modal_eval.py` with a Modal T4 function that accepts
+      kernel code and entry_file and runs the evaluation.
+    - [ ] Test the Modal eval function standalone with one known-good kernel.
+    - [ ] Wire the Modal eval function as the backend for the `validate_kernel` tool.
+  - [ ] `write_ledger` — appends the result object as a JSONL row to `runs/`
+    using the same schema as existing inference ledgers.
 
 ---
 

@@ -1,0 +1,9 @@
+{
+  "name": "kernelforge-agent",
+  "version": "0.1.0",
+  "description": "Pi Agent package for the KernelForge validated kernel development loop.",
+  "keywords": ["pi-package"],
+  "pi": {
+    "extensions": ["./extensions"]
+  }
+}
