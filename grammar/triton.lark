@@ -1,0 +1,229 @@
+%llguidance {}
+
+// Triton/Python scaffold for LLGuidance constrained generation.
+//
+// Design constraints:
+// - LLGuidance is Lark-like, but it does not support Lark templates, imports,
+//   terminal priorities, lexer lookarounds, or Python-style INDENT/DEDENT hooks.
+// - Whitespace is explicit. Do not add a broad `%ignore` rule: Python indentation
+//   and newline boundaries are part of the syntax we need to constrain.
+// - Indentation is intentionally unrolled by level. A generator can template the
+//   repeated LEVEL sections below when baking a deeper grammar.
+
+start: file_item+
+
+file_item: blank_line | stmt_lvl0
+blank_line: _S COMMENT? "\n"
+
+
+// =========================
+// 1. Statements: base forms
+// =========================
+
+simple_stmts: simple_stmt (_S ";" _S simple_stmt)* _S ";"?
+
+// Assignment must stay before expression statements, following Python's grammar.
+simple_stmt: assignment
+           | augmented_assignment
+           | return_stmt
+           | import_stmt
+           | pass_stmt
+           | break_stmt
+           | continue_stmt
+           | expr_stmt
+
+pass_stmt: "pass"
+break_stmt: "break"
+continue_stmt: "continue"
+return_stmt: "return" (_S expr)?
+expr_stmt: expr
+
+assignment: target_list _S "=" _S expr
+augmented_assignment: target _S AUG_ASSIGN _S expr
+target_list: target (_S "," _S target)* _S ","?
+target: NAME target_trailer*
+target_trailer: _S "." _S NAME | _S subscription
+
+import_stmt: import_name | import_from
+
+// Keep the initial research grammar focused on Triton snippets. This accepts
+// the common imports produced by kernels while rejecting arbitrary library
+// imports until a broader Python module grammar is desired.
+import_name: "import" _S triton_import_name (_S "as" _S NAME)?
+triton_import_name: "triton" | "triton" _S "." _S "language" | "torch"
+
+import_from: "from" _S triton_import_name _S "import" _S import_from_targets
+import_from_targets: "*" | import_from_names | "(" _S_NL import_from_names _S_NL ")"
+import_from_names: import_from_name (_S_NL "," _S_NL import_from_name)* _S_NL ","?
+import_from_name: NAME (_S "as" _S NAME)?
+
+
+// =====================================
+// 2. Compound statement headers / suites
+// =====================================
+
+decorator: "@" _S expr
+
+function_header: "def" _S NAME _S "(" _S_NL parameters? _S_NL ")" return_annotation? _S ":"
+return_annotation: _S "->" _S expr
+
+parameters: parameter (_S_NL "," _S_NL parameter)* _S_NL ","?
+parameter: NAME parameter_annotation? parameter_default?
+parameter_annotation: _S ":" _S expr
+parameter_default: _S "=" _S expr
+
+if_header: "if" _S expr _S ":"
+elif_header: "elif" _S expr _S ":"
+else_header: "else" _S ":"
+for_header: "for" _S target_list _S "in" _S expr _S ":"
+while_header: "while" _S expr _S ":"
+
+
+// ==========================
+// 3. Expressions: Python core
+// ==========================
+
+expr: conditional_expr
+conditional_expr: comparison (_S "if" _S comparison _S "else" _S conditional_expr)?
+
+comparison: bit_or (_S COMP_OP _S bit_or)*
+bit_or: bit_xor (_S "|" _S bit_xor)*
+bit_xor: bit_and (_S "^" _S bit_and)*
+bit_and: shift_expr (_S "&" _S shift_expr)*
+shift_expr: sum_expr (_S SHIFT_OP _S sum_expr)*
+sum_expr: term (_S ADD_OP _S term)*
+term: unary (_S MUL_OP _S unary)*
+unary: (ADD_OP _S | "~" _S)* power
+power: primary (_S "**" _S unary)?
+
+primary: atom trailer*
+trailer: _S "." _S NAME | _S call | _S subscription
+
+call: "(" _S_NL arguments? _S_NL ")"
+arguments: argument (_S_NL "," _S_NL argument)* _S_NL ","?
+argument: NAME _S "=" _S expr | expr
+
+subscription: "[" _S_NL slices? _S_NL "]"
+slices: slice_item (_S_NL "," _S_NL slice_item)* _S_NL ","?
+slice_item: expr? _S ":" _S expr? (_S ":" _S expr?)? | expr
+
+atom: NAME
+    | NUMBER
+    | string
+    | "True"
+    | "False"
+    | "None"
+    | "..."
+    | "(" _S_NL tuple_items? _S_NL ")"
+    | "[" _S_NL list_items? _S_NL "]"
+
+tuple_items: expr (_S_NL "," _S_NL expr)* _S_NL ","?
+list_items: expr (_S_NL "," _S_NL expr)* _S_NL ","?
+string: STRING | longstring_d | longstring_s
+
+
+// ===============================================
+// 4. Indentation layers: templating scaffold
+// ===============================================
+// Pattern for each generated LEVEL N:
+// - `indentN` is the baked-in prefix string for that level.
+// - `stmt_lvlN` prefixes every non-empty statement with `indentN`.
+// - `block_lvlN` requires at least one non-empty statement and permits blank
+//   lines around/interspersed with statements.
+// - Compound statements recurse into `block_lvl{N+1}`.
+//
+// The current hand-written scaffold stops at level 3 and makes level 3 a leaf.
+// Increase depth by duplicating LEVEL 2, renaming N and N+1, then moving the leaf.
+
+// ---------------
+// LEVEL 0: column 0
+// ---------------
+stmt_lvl0: simple_stmt_lvl0 | compound_stmt_lvl0
+simple_stmt_lvl0: simple_stmts line_end
+compound_stmt_lvl0: decorated_function_lvl0 | if_stmt_lvl0 | for_stmt_lvl0 | while_stmt_lvl0
+
+// Triton kernels should be decorated in this focused grammar. Bare top-level
+// Python `def` can be enabled later by adding `function_def_lvl0` here.
+decorated_function_lvl0: decorator line_end decorated_function_lvl0_tail
+decorated_function_lvl0_tail: decorator line_end decorated_function_lvl0_tail | function_def_lvl0
+function_def_lvl0: function_header line_end block_lvl1
+if_stmt_lvl0: if_header line_end block_lvl1 elif_clause_lvl0* else_clause_lvl0?
+elif_clause_lvl0: elif_header line_end block_lvl1
+else_clause_lvl0: else_header line_end block_lvl1
+for_stmt_lvl0: for_header line_end block_lvl1
+while_stmt_lvl0: while_header line_end block_lvl1
+
+// ---------------
+// LEVEL 1: four spaces
+// ---------------
+indent1: "    "
+block_lvl1: blank_line* stmt_lvl1 (blank_line | stmt_lvl1)*
+stmt_lvl1: simple_stmt_lvl1 | compound_stmt_lvl1
+simple_stmt_lvl1: indent1 simple_stmts line_end
+compound_stmt_lvl1: decorated_function_lvl1 | if_stmt_lvl1 | for_stmt_lvl1 | while_stmt_lvl1
+
+decorated_function_lvl1: indent1 decorator line_end decorated_function_lvl1_tail
+decorated_function_lvl1_tail: indent1 decorator line_end decorated_function_lvl1_tail | indent1 function_def_lvl1
+function_def_lvl1: function_header line_end block_lvl2
+if_stmt_lvl1: indent1 if_header line_end block_lvl2 elif_clause_lvl1* else_clause_lvl1?
+elif_clause_lvl1: indent1 elif_header line_end block_lvl2
+else_clause_lvl1: indent1 else_header line_end block_lvl2
+for_stmt_lvl1: indent1 for_header line_end block_lvl2
+while_stmt_lvl1: indent1 while_header line_end block_lvl2
+
+// ---------------
+// LEVEL 2: eight spaces
+// ---------------
+indent2: "        "
+block_lvl2: blank_line* stmt_lvl2 (blank_line | stmt_lvl2)*
+stmt_lvl2: simple_stmt_lvl2 | compound_stmt_lvl2
+simple_stmt_lvl2: indent2 simple_stmts line_end
+compound_stmt_lvl2: decorated_function_lvl2 | if_stmt_lvl2 | for_stmt_lvl2 | while_stmt_lvl2
+
+decorated_function_lvl2: indent2 decorator line_end decorated_function_lvl2_tail
+decorated_function_lvl2_tail: indent2 decorator line_end decorated_function_lvl2_tail | indent2 function_def_lvl2
+function_def_lvl2: function_header line_end block_lvl3
+if_stmt_lvl2: indent2 if_header line_end block_lvl3 elif_clause_lvl2* else_clause_lvl2?
+elif_clause_lvl2: indent2 elif_header line_end block_lvl3
+else_clause_lvl2: indent2 else_header line_end block_lvl3
+for_stmt_lvl2: indent2 for_header line_end block_lvl3
+while_stmt_lvl2: indent2 while_header line_end block_lvl3
+
+// ---------------
+// LEVEL 3: twelve spaces, leaf
+// ---------------
+indent3: "            "
+block_lvl3: blank_line* stmt_lvl3 (blank_line | stmt_lvl3)*
+stmt_lvl3: simple_stmt_lvl3
+simple_stmt_lvl3: indent3 simple_stmts line_end
+
+
+// =========================
+// 5. Lexical building blocks
+// =========================
+
+line_end: _S COMMENT? "\n"
+
+// Inline spacing only. `_S_NL` is for bracketed/call contexts where Python
+// allows physical newlines without changing indentation state.
+_S: /[ \t]*/
+_S_NL: /[ \t\n]*/
+
+COMMENT: /#[^\n]*/
+NAME: /[A-Za-z_][A-Za-z0-9_]*/
+
+AUG_ASSIGN: "+=" | "-=" | "*=" | "/=" | "//=" | "%=" | "@=" | "&=" | "|=" | "^=" | ">>=" | "<<=" | "**="
+COMP_OP: "==" | "!=" | "<=" | ">=" | "<" | ">" | "is" _S "not" | "is" | "not" _S "in" | "in"
+SHIFT_OP: "<<" | ">>"
+ADD_OP: "+" | "-"
+MUL_OP: "*" | "/" | "//" | "%" | "@"
+
+INT: /0[xX][0-9a-fA-F]+/ | /0[bB][01]+/ | /0[oO][0-7]+/ | /[1-9][0-9]*/ | "0"
+FLOAT: /([0-9]+\.[0-9]*|\.[0-9]+)([eE][+-]?[0-9]+)?/ | /[0-9]+[eE][+-]?[0-9]+/
+NUMBER: FLOAT | INT
+
+STRING: /[fFrRbBuU]*'([^'\\\n]|\\.)*'/ | /[fFrRbBuU]*"([^"\\\n]|\\.)*"/
+longstring_d: "\"\"\"" longstring_d_inner
+longstring_s: "'''" longstring_s_inner
+longstring_d_inner[suffix="\"\"\""]: /(.|\n)*/
+longstring_s_inner[suffix="'''"]: /(.|\n)*/

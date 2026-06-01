@@ -1,6 +1,6 @@
 import textwrap
 
-from notebooks.benchmark.semantic_checker import check_kernel
+from kernelforge.benchmark.semantic_checker import check_kernel
 
 
 def test_valid_kernel_no_warnings():

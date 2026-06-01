@@ -35,11 +35,26 @@ triton-rocm = [ { index = "pytorch-rocm", extra = "rocm" } ]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[dependency-groups]
+dev = [
+    "llguidance>=1.7.5",
+    "pytest>=9.0.3",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/kernelforge"]
 
 [tool.ruff]
 line-length = 100
+extend-exclude = ["tests/grammar/fixtures", "vendor"]
+
+[tool.pytest.ini_options]
+addopts = "-m 'not corpus and not slow and not gpu'"
+markers = [
+    "corpus: opt-in tests over vendored TritonBench corpora",
+    "gpu: tests requiring a local GPU/Triton runtime",
+    "slow: tests that are too slow for the default local loop",
+]
 
 [tool.basedpyright]
 typeCheckingMode = "basic"
