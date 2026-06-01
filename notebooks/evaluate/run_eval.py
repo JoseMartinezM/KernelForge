@@ -90,10 +90,6 @@ def main() -> None:
                 result["model_label"] = model_label
                 result["semantic_warnings"] = semantic_warnings
                 # Replace speedup with execution_time if it exists; otherwise set to None
-                if "speedup" in result:
-                    del result["speedup"]
-                if "execution_time" not in result:
-                    result["execution_time"] = None
             except Exception as exc:
                 result = {
                     "file": entry_file,
