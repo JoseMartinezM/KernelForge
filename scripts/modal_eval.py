@@ -34,7 +34,10 @@ app = modal.App("kernelforge-eval")
 )
 def evaluate_kernel(kernel_code: str, entry_file: str) -> dict:
     sys.path.insert(0, "/app/src")
+    from kernelforge.benchmark.semantic_checker import check_kernel
     from kernelforge.benchmark.tritonbench import evaluate_entry, load_t_simple_entries
+
+    semantic_warnings = check_kernel(kernel_code)
 
     entries, errors, _, _ = load_t_simple_entries("/app/vendor/TritonBench")
     if errors:
@@ -43,6 +46,8 @@ def evaluate_kernel(kernel_code: str, entry_file: str) -> dict:
             "call@1": False,
             "exe@1": False,
             "mismatches": [f"dataset load errors: {errors}"],
+            "semantic_warnings": semantic_warnings,
+            "execution_time": None,
         }
 
     entry = next((e for e in entries if e["file"] == entry_file), None)
@@ -52,9 +57,14 @@ def evaluate_kernel(kernel_code: str, entry_file: str) -> dict:
             "call@1": False,
             "exe@1": False,
             "mismatches": [f"entry_file '{entry_file}' not found in dataset"],
+            "semantic_warnings": semantic_warnings,
+            "execution_time": None,
         }
 
-    return evaluate_entry(entry, pred_code=kernel_code, timeout=180)
+    result = evaluate_entry(entry, pred_code=kernel_code, timeout=180)
+    result["semantic_warnings"] = semantic_warnings
+    result.setdefault("execution_time", None)
+    return result
 
 
 @app.local_entrypoint()

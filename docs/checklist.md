@@ -29,17 +29,18 @@ mark the item as `[x]` here and close the issue.
     model/provider metadata.
   - Each step maps to one Pi tool in `apps/kernelforge-agent/extensions/`.
 
-- [ ] **Implement the agent tools in `apps/kernelforge-agent/`**
+- [ ] **Implement the agent tools in `apps/agent/`**
   - [ ] `generate_kernel` — calls `uv run python -m kernelforge.benchmark.llm_inference`
     with the task entry and returns the generated code.
-  - [ ] `run_semantic_check` — calls the semantic checker CLI once it exists in
-    `src/kernelforge/`; returns a list of warnings.
-  - [ ] `validate_kernel` — runs the generated kernel against the TritonBench reference
-    and returns call@1, exe@1, and mismatches. Requires GPU.
-    - [ ] Create `scripts/modal_eval.py` with a Modal T4 function that accepts
+  - [ ] `run_semantic_check` — semantic checker exists in `src/kernelforge/benchmark/semantic_checker.py`;
+    needs a Pi tool wrapper in `apps/agent/extensions/`.
+  - [x] `validate_kernel` — runs the generated kernel against the TritonBench reference
+    and returns call@1, exe@1, mismatches, and semantic_warnings. Requires GPU.
+    - [x] Create `scripts/modal_eval.py` with a Modal T4 function that accepts
       kernel code and entry_file and runs the evaluation.
-    - [ ] Test the Modal eval function standalone with one known-good kernel.
-    - [ ] Wire the Modal eval function as the backend for the `validate_kernel` tool.
+    - [x] Test the Modal eval function standalone with one known-good kernel.
+    - [x] Wire the Modal eval function as the backend for the `validate_kernel` Pi tool
+      in `apps/agent/extensions/validate-kernel.ts`.
   - [ ] `write_ledger` — appends the result object as a JSONL row to `runs/`
     using the same schema as existing inference ledgers.
 

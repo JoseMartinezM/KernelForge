@@ -68,7 +68,14 @@ export default function (pi: ExtensionAPI) {
           `mismatches: ${evalResult.mismatches?.length ? evalResult.mismatches.join(", ") : "none"}`,
         ];
 
-        // Include stderr so the agent can read the exact error and fix the kernel
+        // Semantic warnings give the agent early signals about Triton anti-patterns
+        // even when the kernel compiles and runs — useful for guided regeneration
+        const warnings: string[] = evalResult.semantic_warnings ?? [];
+        lines.push(
+          `semantic_warnings (${warnings.length}): ${warnings.length ? "\n  - " + warnings.join("\n  - ") : "none"}`,
+        );
+
+        // Full stderr lets the agent read the exact error and fix the kernel
         if (evalResult.pred?.stderr) {
           lines.push(`\npred stderr:\n${evalResult.pred.stderr}`);
         }
