@@ -28,6 +28,7 @@ OUTPUT_PATH = RESULTS_DIR / "eval_results.json"
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from kernelforge.benchmark import evaluate_entry, load_jsonl, load_t_simple_entries  # noqa: E402
+from kernelforge.benchmark.semantic_checker import check_kernel  # noqa: E402
 
 
 def main() -> None:
@@ -58,6 +59,10 @@ def main() -> None:
     for i, row in enumerate(raw_results, start=1):
         entry_file = row.get("entry_file")
         model_label = row.get("model_label") or row.get("model") or "unknown"
+        pred_code = row.get("content", "")
+
+        # Run semantic checks on the predicted kernel
+        semantic_warnings = check_kernel(pred_code)
 
         entry = entries_by_file.get(entry_file)
         if entry is None and row.get("entry_index") is not None:
@@ -71,16 +76,20 @@ def main() -> None:
                 "call@1": False,
                 "exe@1": False,
                 "mismatches": ["entry not found in dataset"],
+                "semantic_warnings": semantic_warnings,
+                "execution_time": None,
             }
         else:
             try:
                 result = evaluate_entry(
                     entry,
-                    pred_code=row.get("content", ""),
+                    pred_code=pred_code,
                     timeout=180,
                 )
                 result["model"] = row.get("model")
                 result["model_label"] = model_label
+                result["semantic_warnings"] = semantic_warnings
+                # Replace speedup with execution_time if it exists; otherwise set to None
             except Exception as exc:
                 result = {
                     "file": entry_file,
@@ -89,6 +98,8 @@ def main() -> None:
                     "call@1": False,
                     "exe@1": False,
                     "mismatches": [str(exc)],
+                    "semantic_warnings": semantic_warnings,
+                    "execution_time": None,
                 }
 
         eval_results.append(result)
