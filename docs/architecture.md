@@ -53,11 +53,9 @@ against known-good kernels and values, and record reproducible metrics. Pi Agent
 is the main candidate for orchestrating this loop once its plugin architecture is
 understood.
 
-The constrained-decoding backend remains a design dependency for the grammar.
-LLGuidance is the current preferred option because it supports grammar testing
-against strings and can be integrated through llama.cpp. The caveat is deployment:
-llama.cpp needs a custom build with `-DLLAMA_LLGUIDANCE=ON` and Rust available,
-which must be made reproducible and cost-conscious on Modal.
+The constrained-decoding backend is currently XGrammar through vLLM structured
+outputs on Modal. Keep grammar work focused on `grammar/triton.gbnf` and tests
+that compile or match it through XGrammar.
 
 ## Near-term migration rule
 

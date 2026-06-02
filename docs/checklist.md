@@ -71,20 +71,9 @@ mark the item as `[x]` here and close the issue.
     cost.
 
 - [ ] **Document the backend trade study**
-  - XGrammar: strong constrained decoding, but the practical Python path targets
-    Hugging Face models and production engines such as vLLM or SGLang add Modal
-    complexity and cost.
+  - XGrammar: current path through the Modal vLLM structured-output backend.
   - Plain llama.cpp GBNF: useful for local experiments, but lacks a clean Python
     reference parser library for testing the grammar against example kernels.
-  - LLGuidance: current preferred option because grammars can be unit-tested
-    against strings and integrated through llama.cpp, with the caveat below.
-
-- [ ] **Investigate reproducible LLGuidance deployment on Modal**
-  - llama.cpp must be compiled with `-DLLAMA_LLGUIDANCE=ON` and a Rust toolchain.
-  - Check whether a maintained prebuilt binary, image, or community Modal recipe
-    already exists.
-  - If not, prototype a custom Modal image and measure cold-start/build impact
-    before adopting LLGuidance as the default path.
 
 ---
 

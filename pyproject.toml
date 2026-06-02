@@ -37,8 +37,8 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
-    "llguidance>=1.7.5",
     "pytest>=9.0.3",
+    "xgrammar>=0.2.1",
 ]
 
 [tool.hatch.build.targets.wheel]

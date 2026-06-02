@@ -14,7 +14,7 @@
       "token": null
     },
     "modal": {
-      "url": "https://vic-89368--example-vllm-inference-vllmserver-serve.modal.run/v1",
+      "url": "https://vic-89368--kernelforge-vllm-vllmserver-serve.modal.run/v1",
       "token": null,
       "headers": {
         "Modal-Key": ["MODAL_API_KEY", "MODAL_API_TOKEN"],

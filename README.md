@@ -40,17 +40,10 @@ on whether its plugin system can call KernelForge benchmark loaders, semantic
 checks, constrained decoding, and validation steps without forcing a large repo
 reshaping.
 
-The constrained-decoding backend is still being selected. The working choice is
-**LLGuidance**, because it supports unit-testable grammars against strings and has
-capabilities closer to XGrammar than plain GBNF-only paths. Important caveat:
-using LLGuidance through llama.cpp requires a custom llama.cpp build with
-`-DLLAMA_LLGUIDANCE=ON` and a Rust toolchain. That is easy enough locally, but it
-must be made reproducible and cost-conscious on Modal before it becomes the
-default inference path. XGrammar is less attractive right now because its Python
-path is tied to Hugging Face models and its production paths such as vLLM or
-SGLang complicate a low-cost Modal setup. Plain llama.cpp GBNF remains useful,
-but there is no clean reference Python parser library for testing the grammar
-against Triton examples before inference.
+The constrained-decoding path is now centered on XGrammar through the Modal vLLM
+backend's structured-output support. `grammar/triton.gbnf` is the active grammar
+artifact for those experiments; plain llama.cpp GBNF remains useful for local
+debugging, but the production smoke tests should exercise the vLLM/XGrammar path.
 
 ## Repository map
 
@@ -141,8 +134,8 @@ Keep local `.env*` files uncommitted.
 - `kernelforge.benchmark.llm_results`: JSONL loading, syntax metrics, cost
   estimates, and notebook-friendly tables.
 - `scripts/modal_vllm.py`: Modal deployment for the Gemma 4 E4B vLLM backend.
-- `grammar/triton.gbnf`: current grammar experiment. The selected backend may
-  require translating or replacing this with an LLGuidance-compatible grammar.
+- `grammar/triton.gbnf`: current XGrammar/vLLM constrained-decoding grammar
+  experiment.
 
 Generated inference and evaluation ledgers should go under `runs/`.
 

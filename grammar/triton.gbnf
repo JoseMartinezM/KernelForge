@@ -1,119 +1,195 @@
-# ===============
-# ROOT
-# ===============
-# A Python file is a sequence of level-0 statements or empty lines.
-root ::= (stmt-lvl0-body | empty-line)+
+# Triton JIT-block grammar for XGrammar
 
-# ===============
-# 1. ATOMIC ELEMENTS
-# ===============
-identifier ::= [a-zA-Z_] [a-zA-Z0-9_]*
-number     ::= "-"? [0-9]+ ("." [0-9]+)?
-# Simple string matching for both quote styles, avoiding complex escape sequences for the base
-string     ::= ["] [^"]* ["] | ['] [^']* [']
+# We use a state-machine like rule to allow any arbitrary text before and after
+# a Python function with the `@triton.jit` decorator, with or without 
+# parentheses, to allow decorator params like `@triton.jit(debug=True)`.
+#
+# Using the official Python grammar definition, as well as the Triton source
+# code, we can extract the valid AST nodes for Triton's JIT compiler and the
+# Python grammar rules that produce them. We explicitly emit rules for up to
+# n-depth indentation as we cannot use a preprocessor to emit INDENT/DEDENT
+# tokens. While in theory one could fine-tune a model to emit python with
+# braces to make the language context-free, it would likely degrade code
+# quality. We believe baked indentation is a sufficient compromise.
 
-ws         ::= [ \t]*
-ws-nl      ::= [ \t\n]*
-empty-line ::= ws "\n"
+root ::= python-outside (jit-block post-jit-outside?)*
 
-# ===============
-# 2. EXPRESSIONS
-# ===============
-# func-call is prioritized before identifier to prevent greedy masking
-expr      ::= string | number | func-call | identifier
-func-call ::= identifier ws "(" ws-nl call-args ws-nl ")"
-call-args ::= (expr (ws-nl "," ws-nl expr)* (ws-nl ",")?)?
+# Outside a JIT block, do not constrain the Python module.  The model may write
+# imports, wrappers, launch grids, comments, tests, etc.  The following JIT block
+# starts only after the literal decorator form requested by the prompt.
+python-outside ::= outside-char*
+outside-char ::= [^@] | "@" not-jit-trigger
+not-jit-trigger ::= [^t] | "t" [^r] | "tr" [^i] | "tri" [^t] | "trit" [^o] | "trito" [^n] | "triton" [^.] | "triton." [^j] | "triton.j" [^i] | "triton.ji" [^t] | "triton.jit" [^\x0a(]
+any-char ::= [\x09\x0a\x0d\x20-\x7e]
 
-# ===============
-# 3. SIMPLE STATEMENTS
-# ===============
-simple-stmts ::= simple-stmt (ws ";" ws simple-stmt)* ws (";" ws)? "\n"
-simple-stmt  ::= assignment | return-stmt | import-stmt | pass-stmt | expr
-assignment   ::= identifier ws "=" ws expr
-return-stmt  ::= "return" (ws expr)?
-pass-stmt    ::= "pass"
+# Once a JIT block has started, it may only hand control back to unconstrained
+# Python at EOF, after trailing blank lines, or at a real dedent to a non-JIT
+# top-level token. This prevents an invalid indented JIT statement from being
+# reinterpreted as post-JIT Python code.
+post-jit-outside ::= post-jit-blank-line+ | post-jit-blank-line* post-jit-dedent-start python-outside
+post-jit-blank-line ::= ws "\n"
+post-jit-dedent-start ::= [^\x09\x0a\x20@] | "@" not-jit-trigger
 
-import-stmt ::= import-name | import-from
-import-name ::= "import" ws dotted-as-names
+jit-block ::= jit-decorator function-header "\n" block1
+jit-decorator ::= "@triton.jit" call? "\n"
 
-dotted-as-names ::= dotted-as-name ( ws "," ws dotted-as-name )*
-dotted-as-name ::= dotted-name (ws "as" ws identifier)*
-dotted-name ::= identifier ( ws "." ws identifier )*
+# =========================
+# Function signature
+# =========================
 
-import-from ::= "from" ws dotted-name ws "import" ws import-from-targets
-import-from-targets  ::= "(" ws-nl import-from-as-names ( ws-nl ","? ) ws-nl ")" | import-from-as-names | "*"
-import-from-as-names ::= import-from-as-name ( ws-nl "," ws-nl import-from-as-name )*
-import-from-as-name ::= identifier ( ws "as" ws identifier )?
+function-header ::= "def" ws name ws "(" nl-ws parameters? nl-ws ")" ws ":"
+parameters ::= parameter (nl-ws "," nl-ws parameter)* nl-ws ","?
+parameter ::= name annotation? default-value?
+annotation ::= ws ":" ws expr
+default-value ::= ws "=" ws expr
 
-# ===============
-# 4. COMPOUND STATEMENT HEADERS (Function Defs & Parameters)
-# ===============
-# Stub grammar for types
-type-stub ::= identifier
+# ===========================
+# Statements admitted in Triton JIT bodies
+# ===========================
 
-# Parameters: supports `name` or `name: type`, and optional trailing commas
-param       ::= identifier (ws-nl ":" ws-nl type-stub)?
-params      ::= (param (ws-nl "," ws-nl param)* (ws-nl ",")?)?
+simple-stmts ::= simple-stmt (ws ";" ws simple-stmt)* ws ";"?
+simple-stmt ::= ann-assign | assign | aug-assign | return-stmt | assert-stmt | pass-stmt | expr-stmt
 
-# We extract headers so the indentation layers can cleanly wrap them
-decorator ::= "@" ws dotted-name ws "\n"
-func-header ::= decorator? "def" ws identifier ws "(" ws-nl params ws-nl ")" ws-nl ("->" ws-nl type-stub ws-nl)? ":" ws
-if-header   ::= "if" ws expr ws ":" ws
+assign ::= target-list ws "=" ws expr-list
+ann-assign ::= target ws ":" ws expr (ws "=" ws expr-list)?
+aug-assign ::= target ws aug-op ws expr
+return-stmt ::= "return" (ws expr-list)?
+assert-stmt ::= "assert" ws expr (ws "," ws expr)?
+pass-stmt ::= "pass"
+expr-stmt ::= expr
 
+target-list ::= target (ws "," ws target)* ws ","?
+target ::= name | "(" nl-ws target-list? nl-ws ")" | "[" nl-ws target-list? nl-ws "]"
 
-# ===============
-# 5. INDENTATION LAYERS (UNROLLED SCOPE)
-# ===============
-# Pattern to copy-paste for Level N:
-# - Define `indentN`
-# - Define `block-lvlN` requiring at least one non-empty body statement
-# - Define compound statements that drop into `block-lvl{N+1}`
+if-header ::= "if" ws expr ws ":"
+elif-header ::= "elif" ws expr ws ":"
+else-header ::= "else" ws ":"
+for-header ::= "for" ws target-list ws "in" ws for-iterator ws ":"
+for-iterator ::= ("range" | "tl.range" | "tl.static_range" | "triton.language.range" | "triton.language.static_range") ws call
+while-header ::= "while" ws expr ws ":"
+with-header ::= "with" ws with-items ws ":"
+with-items ::= with-item (ws "," ws with-item)*
+with-item ::= expr (ws "as" ws target)?
 
-# ---------------
-# LEVEL 0 (0 spaces)
-# ---------------
-stmt-lvl0-body     ::= simple-stmts-lvl0 | compound-stmt-lvl0
-simple-stmts-lvl0  ::= simple-stmts
-compound-stmt-lvl0 ::= func-def-lvl0 | if-stmt-lvl0
+# ========================
+# Unrolled indented statements
+# ========================
 
-func-def-lvl0      ::= func-header "\n" block-lvl1
-if-stmt-lvl0       ::= if-header "\n" block-lvl1
+block1 ::= (blank-line | comment1)* stmt1 (blank-line | comment1 | stmt1)*
+stmt1 ::= simple1 | compound1
+simple1 ::= indent1 simple-stmts line-end
+compound1 ::= if1 | for1 | while1 | with1
+if1 ::= indent1 if-header line-end block2 elif1? else1?
+elif1 ::= indent1 elif-header line-end block2 elif1?
+else1 ::= indent1 else-header line-end block2
+for1 ::= indent1 for-header line-end block2 else1?
+while1 ::= indent1 while-header line-end block2 else1?
+with1 ::= indent1 with-header line-end block2
 
-# ---------------
-# LEVEL 1 (4 spaces)
-# ---------------
-indent1            ::= "    "
-# Enforce that a block has at least one actual statement, interspersed with empty lines
-block-lvl1         ::= empty-line* stmt-lvl1-body (stmt-lvl1-body | empty-line)*
+block2 ::= (blank-line | comment2)* stmt2 (blank-line | comment2 | stmt2)*
+stmt2 ::= simple2 | compound2
+simple2 ::= indent2 simple-stmts line-end
+compound2 ::= if2 | for2 | while2 | with2
+if2 ::= indent2 if-header line-end block3 elif2? else2?
+elif2 ::= indent2 elif-header line-end block3 elif2?
+else2 ::= indent2 else-header line-end block3
+for2 ::= indent2 for-header line-end block3 else2?
+while2 ::= indent2 while-header line-end block3 else2?
+with2 ::= indent2 with-header line-end block3
 
-stmt-lvl1-body     ::= simple-stmts-lvl1 | compound-stmt-lvl1
-simple-stmts-lvl1  ::= indent1 simple-stmts
-compound-stmt-lvl1 ::= func-def-lvl1 | if-stmt-lvl1
+block3 ::= (blank-line | comment3)* stmt3 (blank-line | comment3 | stmt3)*
+stmt3 ::= simple3 | compound3
+simple3 ::= indent3 simple-stmts line-end
+compound3 ::= if3 | for3 | while3 | with3
+if3 ::= indent3 if-header line-end block4 elif3? else3?
+elif3 ::= indent3 elif-header line-end block4 elif3?
+else3 ::= indent3 else-header line-end block4
+for3 ::= indent3 for-header line-end block4 else3?
+while3 ::= indent3 while-header line-end block4 else3?
+with3 ::= indent3 with-header line-end block4
 
-func-def-lvl1      ::= indent1 func-header "\n" block-lvl2
-if-stmt-lvl1       ::= indent1 if-header "\n" block-lvl2
+block4 ::= (blank-line | comment4)* stmt4 (blank-line | comment4 | stmt4)*
+stmt4 ::= simple4 | compound4
+simple4 ::= indent4 simple-stmts line-end
+compound4 ::= if4 | for4 | while4 | with4
+if4 ::= indent4 if-header line-end block5 elif4? else4?
+elif4 ::= indent4 elif-header line-end block5 elif4?
+else4 ::= indent4 else-header line-end block5
+for4 ::= indent4 for-header line-end block5 else4?
+while4 ::= indent4 while-header line-end block5 else4?
+with4 ::= indent4 with-header line-end block5
 
-# ---------------
-# LEVEL 2 (8 spaces)
-# ---------------
-indent2            ::= "        "
-block-lvl2         ::= empty-line* stmt-lvl2-body (stmt-lvl2-body | empty-line)*
+block5 ::= (blank-line | comment5)* stmt5 (blank-line | comment5 | stmt5)*
+stmt5 ::= simple5
+simple5 ::= indent5 simple-stmts line-end
 
-stmt-lvl2-body     ::= simple-stmts-lvl2 | compound-stmt-lvl2
-simple-stmts-lvl2  ::= indent2 simple-stmts
-compound-stmt-lvl2 ::= func-def-lvl2 | if-stmt-lvl2
+indent1 ::= "    "
+indent2 ::= "        "
+indent3 ::= "            "
+indent4 ::= "                "
+indent5 ::= "                    "
 
-func-def-lvl2      ::= indent2 func-header "\n" block-lvl3
-if-stmt-lvl2       ::= indent2 if-header "\n" block-lvl3
+comment1 ::= indent1 comment "\n"
+comment2 ::= indent2 comment "\n"
+comment3 ::= indent3 comment "\n"
+comment4 ::= indent4 comment "\n"
+comment5 ::= indent5 comment "\n"
 
-# ---------------
-# LEVEL 3 (12 spaces - LEAF NODE)
-# ---------------
-# To prevent needing Level 4, compound statements are omitted at the deepest level.
-indent3            ::= "            "
-block-lvl3         ::= empty-line* stmt-lvl3-body (stmt-lvl3-body | empty-line)*
+# =========================
+# Expressions admitted by Triton
+# =========================
 
-stmt-lvl3-body     ::= simple-stmts-lvl3
-simple-stmts-lvl3  ::= indent3 simple-stmts
+expr-list ::= expr (ws "," ws expr)* ws ","?
+expr ::= conditional
+conditional ::= disjunction (ws "if" ws disjunction ws "else" ws conditional)?
+disjunction ::= conjunction (ws "or" ws conjunction)*
+conjunction ::= inversion (ws "and" ws inversion)*
+inversion ::= "not" ws inversion | comparison
+comparison ::= bit-or (ws comp-op ws bit-or)?
+bit-or ::= bit-xor (ws "|" ws bit-xor)*
+bit-xor ::= bit-and (ws "^" ws bit-and)*
+bit-and ::= shift (ws "&" ws shift)*
+shift ::= sum (ws shift-op ws sum)*
+sum ::= term (ws add-op ws term)*
+term ::= unary (ws mul-op ws unary)*
+unary ::= (add-op ws | "~" ws)* power
+power ::= primary (ws "**" ws unary)?
 
+primary ::= atom trailer*
+trailer ::= ws "." ws name | ws call | ws subscription
+call ::= "(" nl-ws arguments? nl-ws ")"
+arguments ::= argument (nl-ws "," nl-ws argument)* nl-ws ","?
+argument ::= name ws "=" ws expr | expr
 
+subscription ::= "[" nl-ws slices? nl-ws "]"
+slices ::= slice-item (nl-ws "," nl-ws slice-item)* nl-ws ","?
+slice-item ::= expr? ws ":" ws expr? (ws ":" ws expr?)? | expr
+
+atom ::= name | number | string | "True" | "False" | "None" | "(" nl-ws expr-list? nl-ws ")" | "[" nl-ws expr-list? nl-ws "]"
+
+# =========================
+# Lexical building blocks
+# =========================
+
+line-end ::= ws comment? "\n"
+blank-line ::= ws "\n"
+comment ::= "#" [^\x0a]*
+
+ws ::= [ \t]*
+nl-ws ::= ws (comment? "\n" ws)*
+name ::= [A-Za-z_] [A-Za-z0-9_]*
+
+aug-op ::= "+=" | "-=" | "*=" | "/=" | "//=" | "%=" | "&=" | "|=" | "^=" | ">>=" | "<<=" | "**="
+comp-op ::= "==" | "!=" | "<=" | ">=" | "<" | ">" | "is not" | "is"
+shift-op ::= "<<" | ">>"
+add-op ::= "+" | "-"
+mul-op ::= "*" | "/" | "//" | "%"
+
+number ::= float | int
+int ::= "0" | [1-9] [0-9]* | "0x" [0-9a-fA-F]+ | "0X" [0-9a-fA-F]+ | "0b" [01]+ | "0B" [01]+ | "0o" [0-7]+ | "0O" [0-7]+
+float ::= [0-9]+ "." [0-9]* exponent? | "." [0-9]+ exponent? | [0-9]+ exponent
+exponent ::= [eE] [+-]? [0-9]+
+string ::= f-string | triple-string | single-string
+f-string ::= [fF] single-string | [fF] triple-string
+single-string ::= ["] ([^"\\\x0a] | "\\" any-char)* ["] | ['] ([^'\\\x0a] | "\\" any-char)* [']
+triple-string ::= "\"\"\"" ([^\\] | "\\" any-char)* "\"\"\"" | "'''" ([^\\] | "\\" any-char)* "'''"

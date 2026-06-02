@@ -12,13 +12,10 @@ Triton kernels and values, and written to reproducible benchmark ledgers. Pi
 Agent is the main orchestration candidate to study; its architecture and plugin
 system must be evaluated before adding project adapters under `apps/`.
 
-The constrained-decoding backend is also still a design choice. LLGuidance is the
-current preferred option because it supports unit-testable grammars against test
-strings and has capabilities close enough to XGrammar for the planned Triton
-grammar. The main caveat is deployment: llama.cpp must be custom-compiled with
-`-DLLAMA_LLGUIDANCE=ON` and a Rust toolchain. That is straightforward locally,
-but it must be made reproducible and cost-conscious on Modal before it becomes
-the default path.
+The constrained-decoding path is currently XGrammar through the Modal vLLM
+backend's structured-output support. The active grammar artifact is
+`grammar/triton.gbnf`, with project tests compiling and matching it through
+XGrammar before inference smoke tests.
 
 ## Prerequisites
 
@@ -28,7 +25,7 @@ the default path.
 - Python 3.11 or newer. `uv` can download a compatible interpreter if needed.
 - Provider credentials for whichever inference backend you use:
   - Lightning AI: `LIGHTNING_API_KEY` for `lightning-ai/gemma-4-31B-it`, `lightning-ai/deepseek-v4-pro`, and `openai/gpt-5.4-2026-03-05` through the Lightning OpenAI-compatible API.
-  - Modal: Modal CLI auth plus `MODAL_API_KEY` or `MODAL_API_TOKEN`, and `MODAL_API_SECRET`, for the proxy-authenticated Gemma 4 vLLM endpoint.
+  - Modal: Modal CLI auth for serving/deploying the Gemma 4 vLLM endpoint, plus `MODAL_API_KEY` or `MODAL_API_TOKEN` and `MODAL_API_SECRET` for proxy-authenticated inference requests. The local Modal entrypoint also accepts `KF_MODAL_PROXY_KEY` and `KF_MODAL_PROXY_SECRET` aliases.
   - Google AI Studio: `GOOGLE_API_KEY` is only needed for the older `notebooks/compare_models.py` Google-client path.
 - A supported Linux GPU stack only when locally compiling/running generated Triton kernels. LLM inference through Lightning or Modal does not require a local GPU.
 
@@ -71,6 +68,9 @@ export LIGHTNING_API_KEY="..."
 # Modal proxy-authenticated endpoint
 export MODAL_API_KEY="..."      # or MODAL_API_TOKEN
 export MODAL_API_SECRET="..."
+# If `modal run` hides MODAL_* vars from the local entrypoint:
+export KF_MODAL_PROXY_KEY="$MODAL_API_KEY"
+export KF_MODAL_PROXY_SECRET="$MODAL_API_SECRET"
 
 # Only for notebooks/compare_models.py's Google AI Studio path
 export GOOGLE_API_KEY="..."
@@ -166,19 +166,18 @@ uv run python -m kernelforge.benchmark.llm_inference \
 
 ## Modal Gemma 4 backend
 
-The Modal backend runs `google/gemma-4-E4B-it` behind a vLLM OpenAI-compatible server on an A100-80GB. The configured provider in `llm_models.json` uses Modal proxy auth headers rather than a bearer token.
+The Modal backend runs `google/gemma-4-E4B-it` behind a proxy-authenticated vLLM OpenAI-compatible server on a single L4 by default. It is tuned for low-cost research benchmarking with XGrammar-backed structured outputs, not maximum throughput. The configured provider in `llm_models.json` sends Modal proxy-auth headers rather than a bearer token. If the default L4 shape is too tight for a model revision, override it at deploy time, for example:
+
+```bash
+KF_MODAL_GPU=A100-40GB uv run modal deploy scripts/modal_vllm.py
+```
+
+The default deployment uses `KF_MODAL_MIN_CONTAINERS=0` to avoid idle GPU cost. Cold starts can take minutes while vLLM loads or Modal restores a GPU snapshot; use high client timeouts for the first request, and temporarily deploy with `KF_MODAL_MIN_CONTAINERS=1` only when testing startup-sensitive web requests.
 
 ### 1. Authenticate Modal locally
 
 ```bash
 uv run modal token new
-```
-
-For inference through the deployed proxy-authenticated web endpoint, also set:
-
-```bash
-export MODAL_API_KEY="..."      # or MODAL_API_TOKEN
-export MODAL_API_SECRET="..."
 ```
 
 ### 2. Serve or deploy the vLLM backend
@@ -218,7 +217,7 @@ The first call can include Modal/vLLM startup time. Use a high timeout for smoke
 
 ### 4. Run the Modal full batch
 
-The current Modal container is configured for eight concurrent web inputs. A validated full-batch shape is:
+The current Modal container is configured for four concurrent web inputs. A cost-conscious full-batch shape is:
 
 ```bash
 uv run python -m kernelforge.benchmark.llm_inference \
@@ -226,7 +225,7 @@ uv run python -m kernelforge.benchmark.llm_inference \
   --max-tokens 8000 \
   --temperature 0 \
   --top-p 1 \
-  --max-workers 8 \
+  --max-workers 4 \
   --stagger-seconds 0 \
   --max-attempts 2 \
   --timeout 1200 \
@@ -243,16 +242,11 @@ to the grammar and assert accept/reject behavior before running inference.
 
 Current backend notes:
 
-- XGrammar is powerful, but its practical Python path targets Hugging Face models
-  and its production-engine path points toward systems such as vLLM or SGLang,
-  which makes a low-cost Modal setup harder.
+- XGrammar is available through the Modal vLLM backend's structured-output path.
+  Use this for production-engine constrained decoding smoke tests.
 - Plain llama.cpp GBNF remains useful for local experiments, but the project does
   not currently have a clean Python reference parser library for validating the
   grammar against fixtures.
-- LLGuidance is the preferred candidate. For llama.cpp integration, build with
-  `-DLLAMA_LLGUIDANCE=ON`; this also requires Rust and `cargo`. Before relying on
-  it in Modal, check for maintained prebuilt binaries/images or a community Modal
-  recipe. If none exists, prototype a custom image and measure startup/build cost.
 
 Grammar fixtures should account for constrained decoding limitations around
 Python indentation. Prefer explicit 4-space literals and bounded nesting rather
@@ -327,9 +321,10 @@ uv run basedpyright
 
 ## Troubleshooting
 
-- Provider credentials are missing in dry-run output: export the needed variables in the shell that launches the command. Modal needs `MODAL_API_KEY` or `MODAL_API_TOKEN` plus `MODAL_API_SECRET`.
+- Provider credentials are missing in dry-run output: export the needed variables in the shell that launches the command.
 - Modal smoke test times out: use `--timeout 1200` for cold starts, confirm `modal serve`/`modal deploy` is healthy, and verify the configured provider URL matches the deployed endpoint.
-- Modal requests fail with auth errors: run `uv run modal token new` for CLI auth and check the proxy-auth header env vars.
+- Modal requests fail with auth errors: run `uv run modal token new` for CLI auth, and check `MODAL_API_KEY` or `MODAL_API_TOKEN` plus `MODAL_API_SECRET` for proxy-authenticated HTTP requests. For `modal run` local entrypoint testing, use `KF_MODAL_PROXY_KEY`/`KF_MODAL_PROXY_SECRET` aliases if Modal hides its own env vars.
+- Modal deploy/serve fails with auth errors: run `uv run modal token new` for CLI auth.
 - Triton/PyTorch imports or GPU checks fail locally: confirm you installed the correct extra (`uv sync --extra rocm`) and that the host GPU driver/runtime is visible before debugging KernelForge code.
 - Relative file reads fail: run commands from the repo root, not from `notebooks/` or `vendor/`.
 - Vendored TritonBench eval scripts fail immediately: inspect hardcoded paths first; several scripts were copied from upstream with machine-specific defaults.

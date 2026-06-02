@@ -180,6 +180,102 @@ def stable_hash(value: Any) -> str:
     return hashlib.sha256(data.encode("utf-8")).hexdigest()
 
 
+def text_hash(value: str) -> str:
+    """Hash text exactly as it will be sent to an inference provider."""
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def manifest_path_for_output(out_path: str | Path) -> Path:
+    """Return the sidecar manifest path for an inference JSONL ledger."""
+    return Path(f"{out_path}.manifest.json")
+
+
+def _grammar_manifest_entries(
+    generation: dict[str, Any],
+    *,
+    grammar_source_path: str | Path | None = None,
+) -> list[dict[str, Any]]:
+    extra_body = generation.get("extra_body")
+    if not isinstance(extra_body, dict):
+        return []
+
+    location = "generation.extra_body.guided_grammar"
+    grammar = extra_body.get("guided_grammar")
+    if not isinstance(grammar, str):
+        return []
+
+    entry: dict[str, Any] = {
+        "location": location,
+        "sha256": text_hash(grammar),
+        "bytes": len(grammar.encode("utf-8")),
+        "content": grammar,
+    }
+    if grammar_source_path is not None:
+        entry["source_path"] = str(Path(grammar_source_path))
+    return [entry]
+
+
+def _generation_manifest_view(
+    generation: dict[str, Any], grammar_entries: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Return generation params with large grammar strings replaced by manifest refs."""
+    view = json.loads(json.dumps(generation, ensure_ascii=False))
+    extra_body = view.get("extra_body")
+    if isinstance(extra_body, dict):
+        if isinstance(extra_body.get("guided_grammar"), str):
+            grammar_entry = grammar_entries[0] if grammar_entries else None
+            extra_body["guided_grammar"] = {
+                "manifest_ref": "grammars[0]",
+                "sha256": grammar_entry.get("sha256") if grammar_entry else None,
+                "bytes": grammar_entry.get("bytes") if grammar_entry else None,
+            }
+    return view
+
+
+def _redacted_generation_for_log(generation: dict[str, Any]) -> dict[str, Any]:
+    """Return generation params safe for progress logs without dumping full grammars."""
+    view = json.loads(json.dumps(generation, ensure_ascii=False))
+    extra_body = view.get("extra_body")
+    if isinstance(extra_body, dict):
+        if isinstance(extra_body.get("guided_grammar"), str):
+            grammar = extra_body["guided_grammar"]
+            extra_body["guided_grammar"] = {
+                "redacted": True,
+                "sha256": text_hash(grammar),
+                "bytes": len(grammar.encode("utf-8")),
+            }
+    return view
+
+
+def write_run_manifest(
+    out_path: str | Path,
+    tasks: list[dict[str, Any]],
+    *,
+    generation: dict[str, Any],
+    grammar_source_path: str | Path | None = None,
+    manifest_path: str | Path | None = None,
+) -> Path:
+    """Write a run-level sidecar manifest for an inference ledger."""
+    out_path = Path(out_path)
+    path = Path(manifest_path) if manifest_path is not None else manifest_path_for_output(out_path)
+    grammar_entries = _grammar_manifest_entries(
+        generation, grammar_source_path=grammar_source_path
+    )
+    manifest = {
+        "schema_version": 1,
+        "created_at": _now_iso(),
+        "ledger_path": str(out_path),
+        "task_count": len(tasks),
+        "models": sorted({task["model"] for task in tasks}),
+        "providers": sorted({task["provider"] for task in tasks}),
+        "generation": _generation_manifest_view(generation, grammar_entries),
+        "grammars": grammar_entries,
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return path
+
+
 def build_tasks(
     entries: list[dict[str, Any]],
     model: str,
@@ -822,7 +918,7 @@ def run_batch(
                     time.sleep(stagger_seconds - elapsed)
             print(
                 f"submitting [{task_index + 1}/{len(tasks)}] {task['entry_file']} "
-                f"{task['model']} generation={task['generation']}",
+                f"{task['model']} generation={_redacted_generation_for_log(task['generation'])}",
                 flush=True,
             )
             pending.add(
@@ -953,7 +1049,7 @@ def _print_dry_run(tasks: list[dict[str, Any]], config: dict[str, Any], preview:
                     "entry_file": task["entry_file"],
                     "model": task["model"],
                     "provider": task["provider"],
-                    "generation": task["generation"],
+                    "generation": _redacted_generation_for_log(task["generation"]),
                     "estimated_rate_limit_tokens": estimated_tokens,
                     "message_chars": [len(message["content"]) for message in task["messages"]],
                     "user_prompt_preview": task["messages"][1]["content"][:500],
@@ -999,6 +1095,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--top-p", type=float)
     parser.add_argument("--reasoning-effort", choices=("low", "medium", "high"))
     parser.add_argument("--extra-body", type=_parse_extra_body, default={})
+    parser.add_argument(
+        "--grammar-file",
+        type=Path,
+        help=(
+            "Read a GBNF grammar into extra_body.guided_grammar for vLLM/XGrammar "
+            "and snapshot the exact content in the run manifest."
+        ),
+    )
     parser.add_argument("--list-models", action="store_true")
     args = parser.parse_args(argv)
 
@@ -1029,6 +1133,14 @@ def main(argv: list[str] | None = None) -> int:
         generation["reasoning_effort"] = args.reasoning_effort
     if args.extra_body:
         generation["extra_body"] = args.extra_body
+    if args.grammar_file is not None:
+        extra_body = generation.setdefault("extra_body", {})
+        if not isinstance(extra_body, dict):
+            raise ValueError("generation extra_body must be an object to use --grammar-file")
+        if "guided_grammar" in extra_body:
+            parser.error("Set only one of --extra-body guided_grammar or --grammar-file")
+        extra_body["guided_grammar"] = args.grammar_file.read_text(encoding="utf-8")
+        extra_body.setdefault("guided_decoding_backend", "xgrammar")
 
     entry_indices = None
     if args.only_truncated_from is not None:
@@ -1071,10 +1183,17 @@ def main(argv: list[str] | None = None) -> int:
         print("no requests to run", flush=True)
         return 0
 
+    manifest_path = write_run_manifest(
+        args.out,
+        tasks,
+        generation=generation,
+        grammar_source_path=args.grammar_file,
+    )
+
     print(
         f"running {len(tasks)} requests model={args.model} "
         f"max_workers={args.max_workers} stagger_seconds={args.stagger_seconds} "
-        f"max_attempts={args.max_attempts} out={args.out}",
+        f"max_attempts={args.max_attempts} out={args.out} manifest={manifest_path}",
         flush=True,
     )
     run_batch(

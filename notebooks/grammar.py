@@ -61,7 +61,7 @@ def _(mo):
                 "  implementation surface.",
                 "- Host Python and device Triton should be separated: wrappers launch kernels and allocate",
                 "  outputs; device functions use `tl.*` primitives and pointer arithmetic.",
-                "- Because xgrammar/llguidance-style decoding cannot conveniently synthesize virtual",
+                "- Because XGrammar-style decoding cannot conveniently synthesize virtual",
                 "  `INDENT`/`DEDENT` tokens, indentation should be represented with explicit 4-space literals",
                 "  and a bounded nesting depth chosen from observed completions.",
             ]
