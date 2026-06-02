@@ -20,9 +20,31 @@
         "Modal-Key": ["MODAL_API_KEY", "MODAL_API_TOKEN"],
         "Modal-Secret": "MODAL_API_SECRET"
       }
+    },
+    "google-ai-studio": {
+      "url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+      "token": "GOOGLE_API_KEY"
     }
   },
   "models": {
+    "google/gemma-4-31b-it": {
+      "provider": "google-ai-studio",
+      "label": "Gemma 4 31B (Google AI Studio)",
+      "model_id": "gemma-4-31b-it",
+      "generation": {
+        "max_tokens": 4000,
+        "temperature": 0
+      }
+    },
+    "google/gemma-4-26b-it": {
+      "provider": "google-ai-studio",
+      "label": "Gemma 4 26B MoE (Google AI Studio)",
+      "model_id": "gemma-4-26b-a4b-it",
+      "generation": {
+        "max_tokens": 4000,
+        "temperature": 0
+      }
+    },
     "google/gemma-4-E2B-it": {
       "provider": "local",
       "label": "Local Gemma 4 E2B BF16",

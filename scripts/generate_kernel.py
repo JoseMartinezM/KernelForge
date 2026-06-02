@@ -63,13 +63,17 @@ def main() -> None:
         {"role": "user", "content": make_prompt(entry)},
     ]
 
+    api_model = model_cfg.get("model_id", args.model)
     response = client.chat.completions.create(
-        model=args.model,
+        model=api_model,
         messages=messages,
         **generation,
     )
 
     content = response.choices[0].message.content or ""
+    # Strip <thought>...</thought> blocks emitted by reasoning models (e.g. Gemma)
+    import re
+    content = re.sub(r"<thought>.*?</thought>\s*", "", content, flags=re.DOTALL).strip()
     finish_reason = response.choices[0].finish_reason
 
     print(json.dumps({

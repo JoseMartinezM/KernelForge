@@ -14,7 +14,8 @@ export default function (pi: ExtensionAPI) {
       }),
       model: Type.String({
         description:
-          "Model name from llm_models.json. Options: google/gemma-4-E4B-it, " +
+          "Model name from llm_models.json. Options: google/gemma-4-31b-it, " +
+          "google/gemma-4-26b-it, google/gemma-4-E4B-it, " +
           "lightning-ai/deepseek-v4-pro, openai/gpt-5.4-2026-03-05, lightning-ai/gemma-4-31B-it.",
       }),
     }),
