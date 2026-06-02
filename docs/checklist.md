@@ -136,7 +136,7 @@ mark the item as `[x]` here and close the issue.
   and rejects unrelated generic Python.
 - [ ] **`tests/semantic_checker/` fixtures** — checker detects each documented
   anti-pattern.
-- [ ] **`tests/benchmark/` fixtures** — benchmark loading, prompt construction,
+- [x] **`tests/benchmark/` fixtures** — benchmark loading, prompt construction,
   result parsing, and validation metadata remain CPU-testable.
 
 ---

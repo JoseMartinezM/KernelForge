@@ -143,9 +143,10 @@ def analysis_rows(
     config_path: str | Path = DEFAULT_LLM_CONFIG_PATH,
 ) -> list[dict[str, Any]]:
     """Flatten raw ledger rows into a table suitable for Marimo display/filtering."""
-    from .llm_inference import load_llm_config
+    if config is None:
+        from .llm_inference import load_llm_config
 
-    config = load_llm_config(config_path) if config is None else config
+        config = load_llm_config(config_path)
     table = []
     for row_number, row in enumerate(rows, start=1):
         usage = _response_usage(row)
