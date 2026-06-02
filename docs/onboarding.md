@@ -9,8 +9,7 @@ Run commands from the repository root unless a command explicitly says otherwise
 The next milestone is a validated kernel-development loop. Candidate kernels
 should be checked with a basic semantic checker, validated against known-good
 Triton kernels and values, and written to reproducible benchmark ledgers. Pi
-Agent is the main orchestration candidate to study; its architecture and plugin
-system must be evaluated before adding project adapters under `apps/`.
+Agent is the current orchestration adapter, with tools under `apps/agent/`.
 
 The constrained-decoding path is currently XGrammar through the Modal vLLM
 backend's structured-output support. The active grammar artifact is
@@ -38,7 +37,7 @@ XGrammar before inference smoke tests.
 - `src/kernelforge/benchmark/tritonbench.py`: dataset loading, prompt construction, generated-code cleanup, and lightweight local call/execution eval helpers.
 - `src/kernelforge/benchmark/llm_results.py`: JSONL result loading, cost estimates, syntax/code metrics, and summary table helpers.
 - `scripts/modal_vllm.py`: Modal deployment for the Gemma 4 E4B vLLM OpenAI-compatible backend.
-- `apps/`: future agent-loop adapters once the Pi Agent compatibility study is complete.
+- `apps/agent/`: Pi Agent tools for the validated kernel-development loop.
 - `notebooks/compare_models.py`: older marimo comparison notebook that still uses a Google AI Studio client alongside Lightning models.
 - `vendor/TritonBench`: vendored benchmark data, upstream generated outputs, upstream evaluation scripts, and performance metrics.
 - `flake.nix`: optional Nix development shells that provide `uv` and, in the `rocm` shell, ROCm tools/libraries.

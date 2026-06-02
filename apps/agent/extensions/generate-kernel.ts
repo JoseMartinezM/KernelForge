@@ -18,16 +18,33 @@ export default function (pi: ExtensionAPI) {
           "google/gemma-4-26b-it, google/gemma-4-E4B-it, " +
           "lightning-ai/deepseek-v4-pro, openai/gpt-5.4-2026-03-05, lightning-ai/gemma-4-31B-it.",
       }),
+      use_grammar: Type.Optional(Type.Boolean({
+        description:
+          "When true, use constrained generation with grammar/triton.gbnf unless grammar_file is set.",
+      })),
+      grammar_file: Type.Optional(Type.String({
+        description: "Optional GBNF grammar path. Defaults to grammar/triton.gbnf when use_grammar is true.",
+      })),
+      guided_decoding_backend: Type.Optional(Type.String({
+        description: "Guided decoding backend to send with the grammar. Defaults to xgrammar.",
+      })),
     }),
     async execute(toolCallId, params, signal) {
+      const args = [
+        "run", "python",
+        "scripts/generate_kernel.py",
+        "--entry-file", params.entry_file,
+        "--model", params.model,
+      ];
+
+      if (params.use_grammar ?? false) {
+        args.push("--grammar-file", params.grammar_file ?? "grammar/triton.gbnf");
+        args.push("--guided-decoding-backend", params.guided_decoding_backend ?? "xgrammar");
+      }
+
       const result = await pi.exec(
         "uv",
-        [
-          "run", "python",
-          "scripts/generate_kernel.py",
-          "--entry-file", params.entry_file,
-          "--model", params.model,
-        ],
+        args,
         { signal },
       );
 
@@ -60,9 +77,13 @@ export default function (pi: ExtensionAPI) {
         };
       }
 
+      const grammarSummary = genResult.grammar
+        ? `${genResult.grammar.source_path} (${genResult.grammar.guided_decoding_backend})`
+        : "none";
       const summary =
         `entry_file: ${genResult.entry_file}\n` +
         `model: ${genResult.model}\n` +
+        `grammar: ${grammarSummary}\n` +
         `finish_reason: ${genResult.finish_reason}\n` +
         `tokens used: ${genResult.usage?.completion_tokens ?? "unknown"}\n\n` +
         `generated code:\n${genResult.content}`;

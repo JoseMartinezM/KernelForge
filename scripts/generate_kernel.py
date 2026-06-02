@@ -6,12 +6,15 @@ the result as JSON to stdout. Used by the Pi agent's generate_kernel tool.
 
 Usage:
     uv run python scripts/generate_kernel.py --entry-file tanh.py --model google/gemma-4-E4B-it
+    uv run python scripts/generate_kernel.py --entry-file tanh.py --model google/gemma-4-E4B-it \
+        --grammar-file grammar/triton.gbnf
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -34,6 +37,16 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Generate a single Triton kernel for the agent.")
     parser.add_argument("--entry-file", required=True, help="TritonBench entry filename, e.g. tanh.py")
     parser.add_argument("--model", required=True, help="Model name from llm_models.json")
+    parser.add_argument(
+        "--grammar-file",
+        type=Path,
+        help="Optional GBNF grammar file for constrained generation via provider extra_body.",
+    )
+    parser.add_argument(
+        "--guided-decoding-backend",
+        default="xgrammar",
+        help="Guided decoding backend sent with --grammar-file. Defaults to xgrammar.",
+    )
     args = parser.parse_args()
 
     config = load_llm_config()
@@ -58,6 +71,33 @@ def main() -> None:
     )
 
     generation = model_generation_defaults(config, args.model)
+    grammar_metadata = None
+    if args.grammar_file is not None:
+        grammar_path = args.grammar_file
+        if not grammar_path.is_absolute():
+            grammar_path = PROJECT_ROOT / grammar_path
+        if not grammar_path.is_file():
+            print(json.dumps({"error": f"grammar file not found: {grammar_path}"}))
+            sys.exit(1)
+
+        extra_body = generation.setdefault("extra_body", {})
+        if not isinstance(extra_body, dict):
+            print(json.dumps({"error": "generation extra_body must be an object"}))
+            sys.exit(1)
+
+        grammar_text = grammar_path.read_text(encoding="utf-8")
+        extra_body["guided_grammar"] = grammar_text
+        extra_body["guided_decoding_backend"] = args.guided_decoding_backend
+        try:
+            grammar_source_path = str(grammar_path.relative_to(PROJECT_ROOT))
+        except ValueError:
+            grammar_source_path = str(grammar_path)
+        grammar_metadata = {
+            "source_path": grammar_source_path,
+            "guided_decoding_backend": args.guided_decoding_backend,
+            "bytes": len(grammar_text.encode("utf-8")),
+        }
+
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": make_prompt(entry)},
@@ -71,8 +111,7 @@ def main() -> None:
     )
 
     content = response.choices[0].message.content or ""
-    # Strip <thought>...</thought> blocks emitted by reasoning models (e.g. Gemma)
-    import re
+    # Strip <thought>...</thought> blocks emitted by reasoning models (e.g. Gemma).
     content = re.sub(r"<thought>.*?</thought>\s*", "", content, flags=re.DOTALL).strip()
     finish_reason = response.choices[0].finish_reason
 
@@ -81,6 +120,7 @@ def main() -> None:
         "model": args.model,
         "content": content,
         "finish_reason": finish_reason,
+        "grammar": grammar_metadata,
         "usage": {
             "prompt_tokens": response.usage.prompt_tokens if response.usage else None,
             "completion_tokens": response.usage.completion_tokens if response.usage else None,
