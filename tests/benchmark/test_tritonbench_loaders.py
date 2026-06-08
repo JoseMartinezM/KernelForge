@@ -38,7 +38,7 @@ def test_load_t_simple_entries_prepares_reference_and_test_code(tritonbench_root
     assert len(entries) == 166
 
     tanh = next(entry for entry in entries if entry["file"] == "tanh.py")
-    assert tanh["source_path"].endswith("TritonBench_T_v1/tanh.py")
+    assert tanh["source_path"].replace("\\", "/").endswith("TritonBench_T_v1/tanh.py")
     assert "def tanh" in tanh["ref_code"] or "@triton.jit" in tanh["ref_code"]
     assert "def test_" in tanh["test_code"]
     assert TB_SEPARATOR not in tanh["ref_code"]
