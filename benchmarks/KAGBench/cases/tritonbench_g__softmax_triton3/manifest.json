@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_g/softmax_triton3",
+  "source_file": "vendor/TritonBench/data/TritonBench_G_v1/softmax_triton3.py",
+  "entry_file": "softmax_triton3.py",
+  "tags": ["softmax", "mask", "cuda", "torch"]
+}

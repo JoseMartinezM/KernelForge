@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_g/triton_mul2",
+  "source_file": "vendor/TritonBench/data/TritonBench_G_v1/triton_mul2.py",
+  "entry_file": "triton_mul2.py",
+  "tags": ["multiply", "in-place", "elementwise", "cuda", "torch"]
+}

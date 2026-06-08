@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_g/max_reduction",
+  "source_file": "vendor/TritonBench/data/TritonBench_G_v1/max_reduction.py",
+  "entry_file": "max_reduction.py",
+  "tags": ["max", "reduction", "cuda", "torch"]
+}

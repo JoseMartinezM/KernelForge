@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_g/add_example",
+  "source_file": "vendor/TritonBench/data/TritonBench_G_v1/add_example.py",
+  "entry_file": "add_example.py",
+  "tags": ["vector-addition", "elementwise", "cuda", "torch"]
+}

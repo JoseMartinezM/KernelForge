@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_g/geglu_tanh_triton",
+  "source_file": "vendor/TritonBench/data/TritonBench_G_v1/geglu_tanh_triton.py",
+  "entry_file": "geglu_tanh_triton.py",
+  "tags": ["geglu", "activation", "backward", "cuda", "torch"]
+}

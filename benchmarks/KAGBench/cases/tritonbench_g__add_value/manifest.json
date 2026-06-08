@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_g/add_value",
+  "source_file": "vendor/TritonBench/data/TritonBench_G_v1/add_value.py",
+  "entry_file": "add_value.py",
+  "tags": ["torch", "cuda", "elementwise"]
+}

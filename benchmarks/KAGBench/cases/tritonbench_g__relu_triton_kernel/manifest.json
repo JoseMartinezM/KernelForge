@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_g/relu_triton_kernel",
+  "source_file": "vendor/TritonBench/data/TritonBench_G_v1/relu_triton_kernel.py",
+  "entry_file": "relu_triton_kernel.py",
+  "tags": ["tritonbench", "relu", "elementwise", "cuda"]
+}

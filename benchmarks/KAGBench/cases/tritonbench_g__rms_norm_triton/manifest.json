@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_g/rms_norm_triton",
+  "source_file": "vendor/TritonBench/data/TritonBench_G_v1/rms_norm_triton.py",
+  "entry_file": "rms_norm_triton.py",
+  "tags": ["rms-norm", "normalization", "cuda", "torch"]
+}

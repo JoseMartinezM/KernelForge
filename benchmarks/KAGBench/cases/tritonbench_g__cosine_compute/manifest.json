@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_g/cosine_compute",
+  "source_file": "vendor/TritonBench/data/TritonBench_G_v1/cosine_compute.py",
+  "entry_file": "cosine_compute.py",
+  "tags": ["torch", "cuda", "elementwise", "cosine"]
+}

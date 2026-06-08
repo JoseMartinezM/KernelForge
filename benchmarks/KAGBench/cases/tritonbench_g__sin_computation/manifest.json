@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_g/sin_computation",
+  "source_file": "vendor/TritonBench/data/TritonBench_G_v1/sin_computation.py",
+  "entry_file": "sin_computation.py",
+  "tags": ["sine", "out-argument", "elementwise", "cuda", "torch"]
+}

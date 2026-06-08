@@ -1,0 +1,11 @@
+{
+  "id": "tritonbench_g/vector_addition_custom",
+  "source_file": "vendor/TritonBench/data/TritonBench_G_v1/vector_addition_custom.py",
+  "entry_file": "vector_addition_custom.py",
+  "tags": [
+    "vector-addition",
+    "elementwise",
+    "cuda",
+    "torch"
+  ]
+}

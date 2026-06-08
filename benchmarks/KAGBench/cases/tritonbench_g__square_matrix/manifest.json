@@ -1,0 +1,11 @@
+{
+  "id": "tritonbench_g/square_matrix",
+  "source_file": "vendor/TritonBench/data/TritonBench_G_v1/square_matrix.py",
+  "entry_file": "square_matrix.py",
+  "tags": [
+    "elementwise",
+    "matrix",
+    "cuda",
+    "torch"
+  ]
+}

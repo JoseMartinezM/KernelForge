@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_g/log_softmax",
+  "source_file": "vendor/TritonBench/data/TritonBench_G_v1/log_softmax.py",
+  "entry_file": "log_softmax.py",
+  "tags": ["log-softmax", "autograd", "cuda", "torch"]
+}

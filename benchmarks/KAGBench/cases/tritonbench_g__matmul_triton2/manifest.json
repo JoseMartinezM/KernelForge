@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_g/matmul_triton2",
+  "source_file": "vendor/TritonBench/data/TritonBench_G_v1/matmul_triton2.py",
+  "entry_file": "matmul_triton2.py",
+  "tags": ["matmul", "linear-algebra", "cuda", "torch"]
+}

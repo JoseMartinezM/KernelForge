@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_g/sin_kernel",
+  "source_file": "vendor/TritonBench/data/TritonBench_G_v1/sin_kernel.py",
+  "entry_file": "sin_kernel.py",
+  "tags": ["sine", "elementwise", "cuda", "torch"]
+}

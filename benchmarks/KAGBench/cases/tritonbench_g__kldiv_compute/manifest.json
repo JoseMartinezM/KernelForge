@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_g/kldiv_compute",
+  "source_file": "vendor/TritonBench/data/TritonBench_G_v1/kldiv_compute.py",
+  "entry_file": "kldiv_compute.py",
+  "tags": ["kl-divergence", "elementwise", "cuda", "torch"]
+}

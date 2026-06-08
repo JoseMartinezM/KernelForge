@@ -1,0 +1,10 @@
+{
+  "id": "tritonbench_g/vector_addition",
+  "source_file": "vendor/TritonBench/data/TritonBench_G_v1/vector_addition.py",
+  "entry_file": "vector_addition.py",
+  "tags": [
+    "vector-addition",
+    "elementwise",
+    "cuda"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "id": "tritonbench_g/fused_activation",
+  "source_file": "vendor/TritonBench/data/TritonBench_G_v1/fused_activation.py",
+  "entry_file": "fused_activation.py",
+  "tags": [
+    "activation",
+    "in-place",
+    "elementwise",
+    "cuda",
+    "torch"
+  ]
+}
