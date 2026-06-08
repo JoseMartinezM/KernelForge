@@ -39,6 +39,7 @@ build-backend = "hatchling.build"
 dev = [
     "pytest>=9.0.3",
     "xgrammar>=0.2.1",
+    "ply>=3.11",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -50,6 +51,7 @@ extend-exclude = ["tests/grammar/fixtures", "vendor"]
 
 [tool.pytest.ini_options]
 addopts = "-m 'not corpus and not slow and not gpu'"
+pythonpath = ["."]
 markers = [
     "corpus: opt-in tests over vendored TritonBench corpora",
     "gpu: tests requiring a local GPU/Triton runtime",
