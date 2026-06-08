@@ -32,7 +32,7 @@ lex.yy.c: triton.l
 #   gcc triton.tab.c lex.yy.c --> triton_compiler
 
 compiler: triton.tab.c lex.yy.c
-	$(CC) $(CFLAGS) lex.yy.c triton.tab.c $(LDFLAGS) -o triton_compiler
+	$(CC) $(CFLAGS) -DWITH_PARSER lex.yy.c triton.tab.c $(LDFLAGS) -o triton_compiler
 
 triton.tab.c triton.tab.h: triton.y
 	bison -d triton.y
