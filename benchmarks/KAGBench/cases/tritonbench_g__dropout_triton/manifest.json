@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_g/dropout_triton",
+  "source_file": "vendor/TritonBench/data/TritonBench_G_v1/dropout_triton.py",
+  "entry_file": "dropout_triton.py",
+  "tags": ["dropout", "elementwise", "cuda", "torch"]
+}

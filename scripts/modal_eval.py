@@ -68,7 +68,13 @@ def evaluate_kernel(kernel_code: str, entry_file: str) -> dict:
 
 
 @app.local_entrypoint()
-def test(entry_file: str = "tanh.py", kernel_file: str = ""):
+def test(
+    entry_file: str = "tanh.py",
+    kernel_file: str = "",
+    ledger_file: str = "",
+    out: str = "",
+    max_workers: int = 4,
+):
     """
     Run evaluation on Modal.
 
@@ -77,8 +83,52 @@ def test(entry_file: str = "tanh.py", kernel_file: str = ""):
 
     From agent (pass a kernel file):
         uv run modal run scripts/modal_eval.py --entry-file softmax.py --kernel-file /tmp/kernel.py
+
+    Evaluate every successful row in an inference ledger:
+        uv run modal run scripts/modal_eval.py --ledger-file runs/tritonbench/run.jsonl --out runs/tritonbench/run-eval.jsonl
     """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
     import json
+    from pathlib import Path
+
+    if ledger_file:
+        ledger_path = Path(ledger_file)
+        out_path = Path(out) if out else ledger_path.with_name(f"{ledger_path.stem}-eval.jsonl")
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+
+        rows = [json.loads(line) for line in ledger_path.read_text(encoding="utf-8").splitlines() if line]
+        rows = [row for row in rows if row.get("status") == "success"]
+
+        def evaluate_row(row: dict) -> dict:
+            result = evaluate_kernel.remote(
+                kernel_code=row.get("content") or "",
+                entry_file=row["entry_file"],
+            )
+            result.update(
+                {
+                    "entry_index": row.get("entry_index"),
+                    "entry_file": row.get("entry_file"),
+                    "model": row.get("model"),
+                    "model_label": row.get("model_label"),
+                    "provider": row.get("provider"),
+                    "request_hash": row.get("request_hash"),
+                }
+            )
+            return result
+
+        print(f"evaluating {len(rows)} rows from {ledger_path} -> {out_path}")
+        with out_path.open("w", encoding="utf-8") as handle:
+            with ThreadPoolExecutor(max_workers=max_workers) as pool:
+                futures = [pool.submit(evaluate_row, row) for row in rows]
+                for index, future in enumerate(as_completed(futures), start=1):
+                    result = future.result()
+                    handle.write(json.dumps(result) + "\n")
+                    handle.flush()
+                    print(
+                        f"[{index}/{len(futures)}] {result['entry_file']} "
+                        f"call@1={result.get('call@1')} exe@1={result.get('exe@1')}"
+                    )
+        return
 
     if kernel_file:
         kernel_code = open(kernel_file, encoding="utf-8").read()

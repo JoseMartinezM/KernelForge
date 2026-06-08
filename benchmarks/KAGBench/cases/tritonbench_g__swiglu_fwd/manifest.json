@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_g/swiglu_fwd",
+  "source_file": "vendor/TritonBench/data/TritonBench_G_v1/swiglu_fwd.py",
+  "entry_file": "swiglu_fwd.py",
+  "tags": ["torch", "cuda", "activation", "swiglu"]
+}

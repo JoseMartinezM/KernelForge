@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_g/dequantize_rowwise",
+  "source_file": "vendor/TritonBench/data/TritonBench_G_v1/dequantize_rowwise.py",
+  "entry_file": "dequantize_rowwise.py",
+  "tags": ["dequantization", "rowwise", "cuda", "torch"]
+}

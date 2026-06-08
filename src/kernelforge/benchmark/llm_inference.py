@@ -1066,6 +1066,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--model", default="lightning-ai/gemma-4-31B-it")
     parser.add_argument("--out", type=Path, default=Path("runs/tritonbench/llm-inference.jsonl"))
     parser.add_argument("--limit", type=int)
+    parser.add_argument(
+        "--entry-file",
+        action="append",
+        dest="entry_files",
+        help=(
+            "Run only the named TritonBench-T entry file. Repeat to select "
+            "multiple files, e.g. --entry-file softmax.py --entry-file addmm.py."
+        ),
+    )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--dry-run-preview", type=int, default=3)
     parser.add_argument("--max-workers", type=int, default=2)
@@ -1148,6 +1157,19 @@ def main(argv: list[str] | None = None) -> int:
         print(
             f"only-truncated-from: selected {len(entry_indices)} entries "
             f"from {args.only_truncated_from}",
+            flush=True,
+        )
+
+    if args.entry_files is not None:
+        indices_by_file = {entry["file"]: index for index, entry in enumerate(entries)}
+        missing = sorted(set(args.entry_files) - indices_by_file.keys())
+        if missing:
+            parser.error(f"unknown --entry-file value(s): {', '.join(missing)}")
+        selected_indices = {indices_by_file[entry_file] for entry_file in args.entry_files}
+        entry_indices = selected_indices if entry_indices is None else entry_indices & selected_indices
+        print(
+            f"entry-file: selected {len(entry_indices)} entries from "
+            f"{len(args.entry_files)} requested file(s)",
             flush=True,
         )
 

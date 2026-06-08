@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_g/logsumexp_fwd",
+  "source_file": "vendor/TritonBench/data/TritonBench_G_v1/logsumexp_fwd.py",
+  "entry_file": "logsumexp_fwd.py",
+  "tags": ["logsumexp", "reduction", "cuda", "torch"]
+}

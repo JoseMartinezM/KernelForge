@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_g/masked_add_cuda",
+  "source_file": "vendor/TritonBench/data/TritonBench_G_v1/masked_add_cuda.py",
+  "entry_file": "masked_add_cuda.py",
+  "tags": ["masked", "in-place", "elementwise", "cuda", "torch"]
+}

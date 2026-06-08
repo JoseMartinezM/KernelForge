@@ -1,0 +1,11 @@
+{
+  "id": "tritonbench_g/masked_select",
+  "source_file": "vendor/TritonBench/data/TritonBench_G_v1/masked_select.py",
+  "entry_file": "masked_select.py",
+  "tags": [
+    "masked-select",
+    "dynamic-shape",
+    "cuda",
+    "torch"
+  ]
+}

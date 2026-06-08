@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_g/mean_reduction",
+  "source_file": "vendor/TritonBench/data/TritonBench_G_v1/mean_reduction.py",
+  "entry_file": "mean_reduction.py",
+  "tags": ["mean", "reduction", "cuda", "torch"]
+}

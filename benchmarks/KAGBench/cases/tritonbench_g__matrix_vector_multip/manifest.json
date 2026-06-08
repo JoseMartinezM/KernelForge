@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_g/matrix_vector_multip",
+  "source_file": "vendor/TritonBench/data/TritonBench_G_v1/matrix_vector_multip.py",
+  "entry_file": "matrix_vector_multip.py",
+  "tags": ["matrix-vector", "linear-algebra", "cuda", "torch"]
+}

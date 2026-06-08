@@ -1,0 +1,1 @@
+{"id":"tritonbench_g/matrix_transpose","source_file":"vendor/TritonBench/data/TritonBench_G_v1/matrix_transpose.py","entry_file":"matrix_transpose.py","tags":["torch","cuda","matrix-transpose"]}
