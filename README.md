@@ -3,7 +3,7 @@
 KernelForge is a research monorepo for improving LLM generation of Triton
 GPU kernels with constrained generation and validation. The repo combines
 benchmark tooling, exploratory notebooks, grammar experiments, a course LEX/YACC
-compiler component, inference backend experiments, and the planned
+compiler component, inference backend experiments, and the current
 kernel-development agent loop.
 
 The current project is research-first.
@@ -17,10 +17,10 @@ interfaces around that package.
   values before treating results as usable benchmark data.
 - Design constrained-generation grammars that make invalid or non-existent Triton
   APIs harder for the model to emit.
-- Build toward a differentiator: an agent loop for developing kernels. The
+- Build and harden a differentiator: an agent loop for developing kernels. The
   current implementation uses **Pi Agent** tools under `apps/agent/`.
-- Ship a first MVP validation loop with a basic semantic checker before expanding
-  the agent workflow.
+- Maintain a first MVP validation loop with a basic semantic checker before
+  expanding the agent workflow.
 - Implement a LEX/YACC syntax validator for the course requirement.
 - Keep benchmark, inference, evaluation, and notebook workflows reproducible.
 
@@ -48,14 +48,16 @@ debugging, but the production smoke tests should exercise the vLLM/XGrammar path
 ```text
 .
 ├── compiler/                # Course LEX/YACC syntax-validator home
+├── benchmarks/KAGBench/     # Small agentic Triton synthesis benchmark
 ├── docs/                    # Onboarding, evaluation, architecture notes
 ├── grammar/                 # GBNF grammar assets and viewers
 ├── notebooks/               # Marimo exploration and visualization notebooks
 ├── scripts/                 # Operational one-file scripts, e.g. Modal inference
 ├── src/kernelforge/         # Installable reusable Python package
+│   ├── agent/               # KAGBench agent workflow, prompts, ledgers, checks
 │   ├── benchmark/           # TritonBench loaders, prompts, inference, results
 │   └── grammar/             # Python grammar/constrained-generation utilities
-├── tests/                   # Future CPU-first test suites
+├── tests/                   # CPU-first regression tests and opt-in corpus/GPU tests
 ├── apps/                    # Agent-loop adapters and multi-file surfaces
 ├── vendor/TritonBench/      # Vendored upstream benchmark data/scripts
 └── runs/                    # Generated ledgers/results; git-ignored
@@ -99,6 +101,12 @@ uv run python -m kernelforge.benchmark.llm_inference \
 # Modal Gemma backend
 uv run modal serve scripts/modal_vllm.py
 
+# List KAGBench tasks for the reusable agent workflow
+uv run python -m kernelforge.agent list-tasks
+
+# Build one KAGBench workflow payload without calling models or GPUs
+uv run python -m kernelforge.agent run --limit 1 --dry-run
+
 # Interactive notebooks
 uv run marimo edit notebooks/grammar.py
 uv run marimo edit notebooks/tritonbench.py
@@ -125,6 +133,12 @@ Keep local `.env*` files uncommitted.
 
 ## Current stable entry points
 
+- `benchmarks/KAGBench/`: 32-task agentic Triton synthesis benchmark built from
+  TritonBench-G cases, with public tests, hidden/unit tests, prompts, and
+  PyTorch references.
+- `kernelforge.agent`: reusable teacher/implementer workflow over KAGBench,
+  including prompt construction, grammar request shaping, static checks,
+  local/Modal evaluation adapters, and JSONL ledgers.
 - `kernelforge.benchmark.tritonbench`: TritonBench-T loading, prompt construction,
   generated-code cleanup, and lightweight local evaluation helpers.
 - `kernelforge.benchmark.llm_inference`: resumable OpenAI-compatible batch
