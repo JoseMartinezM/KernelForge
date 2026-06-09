@@ -11,7 +11,7 @@
 
 CC      = gcc
 CFLAGS  = -Wall -g
-LDFLAGS = -lfl
+LDFLAGS =
 
 # ── FASE 1: Scanner (solo triton.l) ───────────────────────────────
 #
@@ -38,18 +38,20 @@ triton.tab.c triton.tab.h: triton.y
 	bison -d triton.y
 
 # ── Tests ─────────────────────────────────────────────────────────
+FIXTURES = ../tests/compiler/fixtures
+
 test: scanner
 	@echo "\n=== TEST 1: vector_add ==="
-	./triton_scanner fixtures/valid/vector_add.py
+	./triton_scanner $(FIXTURES)/valid/vector_add.py
 
 	@echo "\n=== TEST 2: softmax ==="
-	./triton_scanner fixtures/valid/softmax_kernel.py
+	./triton_scanner $(FIXTURES)/valid/softmax_kernel.py
 
 	@echo "\n=== TEST 3: bad_syntax (debe mostrar error léxico) ==="
-	./triton_scanner fixtures/invalid/bad_syntax.py || true
+	./triton_scanner $(FIXTURES)/invalid/bad_syntax.py || true
 
 	@echo "\n=== TEST 4: missing_jit ==="
-	./triton_scanner fixtures/invalid/missing_jit.py
+	./triton_scanner $(FIXTURES)/invalid/missing_jit.py
 
 # ── Limpieza ──────────────────────────────────────────────────────
 clean:

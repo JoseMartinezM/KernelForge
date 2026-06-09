@@ -235,11 +235,12 @@ static void imprimir_reporte(void)
  * declaración explícita de tipo.
  * ------------------------------------------------------------------ */
 %type <sval> decorator_seq decorator decorator_str decorator_str_tail
-%type <sval> target_expr
+%type <sval> target_expr target_tuple_tail
 %type <sval> expr cond_expr or_expr and_expr not_expr comparison
 %type <sval> bitor bitxor bitand shift sum term factor power primary atom
 %type <sval> trailer_seq trailer
 %type <sval> expr_list
+%type <sval> lambda_expr
 
 /* ------------------------------------------------------------------
  * PRECEDENCIA (menor → mayor)
@@ -298,7 +299,30 @@ simple_stmt
     | assert_stmt
     | pass_stmt
     | import_stmt
+    | break_stmt
+    | continue_stmt
+    | raise_stmt
+    | global_stmt
+    | nonlocal_stmt
+    | del_stmt
     | expr_stmt
+    ;
+
+global_stmt
+    : GLOBAL NAME global_name_tail
+    ;
+
+global_name_tail
+    : COMMA NAME global_name_tail
+    | /* vacío */
+    ;
+
+nonlocal_stmt
+    : NONLOCAL NAME global_name_tail
+    ;
+
+del_stmt
+    : DEL expr_list
     ;
 
 /* ---- Asignación ------------------------------------------------------- */
@@ -342,6 +366,15 @@ assert_stmt
 
 pass_stmt : PASS ;
 
+break_stmt    : BREAK ;
+continue_stmt : CONTINUE ;
+
+raise_stmt
+    : RAISE
+    | RAISE expr
+    | RAISE expr FROM expr
+    ;
+
 expr_stmt
     : expr
       {
@@ -378,6 +411,8 @@ compound_stmt
     | for_stmt
     | while_stmt
     | with_stmt
+    | class_def
+    | try_stmt
     ;
 
 /* ---- Definición de función -------------------------------------------- */
@@ -400,7 +435,7 @@ funcdef
                        "Funcion '%s' (linea %d) sin @triton.jit",
                        $3, @3.first_line);
       }
-      LPAREN param_seq RPAREN COLON suite
+      LPAREN param_seq RPAREN funcdef_return COLON suite
       { func_actual[0] = '\0'; }
 
     | DEF NAME
@@ -411,17 +446,14 @@ funcdef
                    "Funcion '%s' (linea %d) sin @triton.jit",
                    $2, @2.first_line);
       }
-      LPAREN param_seq RPAREN COLON suite
+      LPAREN param_seq RPAREN funcdef_return COLON suite
       { func_actual[0] = '\0'; }
+    ;
 
-    | decorator_seq DEF NAME
-      {
-          /* mid-rule: funciones con tipo de retorno (->) */
-          int jit = (strstr($1, "triton.jit") != NULL) ? 1 : 0;
-          declarar_func($3, @3.first_line, jit);
-      }
-      LPAREN param_seq RPAREN ARROW expr COLON suite
-      { func_actual[0] = '\0'; }
+/* Tipo de retorno opcional: -> expr */
+funcdef_return
+    : ARROW expr
+    | /* vacío */
     ;
 
 /* ---- Decoradores ------------------------------------------------------- */
@@ -457,10 +489,17 @@ decorator_str_tail
 /*
  * PREGUNTA ORAL: "¿Cómo representas los bloques en la gramática?"
  * RESPUESTA: El lexer emite INDENT al entrar y DEDENT al salir.
- * La regla suite siempre es: NEWLINE INDENT stmt_seq DEDENT
+ * La regla suite siempre es: nl_seq INDENT stmt_seq DEDENT
+ * nl_seq permite uno o más NEWLINE antes del INDENT para manejar
+ * comentarios o líneas en blanco que preceden al bloque.
  */
 suite
-    : NEWLINE INDENT stmt_seq DEDENT
+    : nl_seq INDENT stmt_seq DEDENT
+    ;
+
+nl_seq
+    : NEWLINE nl_seq
+    | NEWLINE
     ;
 
 /* ---- If / For / While / With ------------------------------------------ */
@@ -546,8 +585,15 @@ expr_list_tail
     ;
 
 target_expr
-    : primary
+    : primary target_tuple_tail
       { strncpy($$, $1, sizeof($$) - 1); }
+    ;
+
+target_tuple_tail
+    : COMMA primary target_tuple_tail
+      { $$[0] = '\0'; }
+    | /* vacío */
+      { $$[0] = '\0'; }
     ;
 
 /* ---- Jerarquía de expresiones (sin recursión izquierda) --------------- */
@@ -555,6 +601,8 @@ target_expr
 expr
     : cond_expr
       { strncpy($$, $1, sizeof($$) - 1); }
+    | lambda_expr
+      { strncpy($$, "lambda", sizeof($$) - 1); }
     ;
 
 cond_expr
@@ -592,10 +640,13 @@ not_expr
     ;
 
 comparison
-    : bitor comp_op bitor
-      { strncpy($$, "cmp", sizeof($$) - 1); }
-    | bitor
+    : bitor comp_tail
       { strncpy($$, $1, sizeof($$) - 1); }
+    ;
+
+comp_tail
+    : comp_op bitor comp_tail
+    | /* vacío */
     ;
 
 comp_op
@@ -693,7 +744,12 @@ power
  */
 primary
     : atom trailer_seq
-      { snprintf($$, sizeof($$), "%s%s", $1, $2); }
+      {
+          snprintf($$, sizeof($$), "%s%s", $1, $2);
+          /* Detectar cualquier llamada tl.* en cualquier contexto de expresion */
+          if (func_actual[0] && strncmp($$, "tl.", 3) == 0 && strchr($2, '(') != NULL)
+              add_triton_call($$);
+      }
     ;
 
 trailer_seq
@@ -784,7 +840,82 @@ atom
     | LPAREN expr_list RPAREN   { strncpy($$, "paren",   sizeof($$) - 1); }
     | LBRACKET RBRACKET         { strncpy($$, "list()",  sizeof($$) - 1); }
     | LBRACKET expr_list RBRACKET { strncpy($$, "list",  sizeof($$) - 1); }
+    | LBRACKET expr FOR target_expr IN or_expr comp_if RBRACKET
+      { strncpy($$, "listcomp", sizeof($$) - 1); }
     | LBRACE RBRACE             { strncpy($$, "dict()",  sizeof($$) - 1); }
+    | LBRACE dict_pairs RBRACE  { strncpy($$, "dict",    sizeof($$) - 1); }
+    | LBRACE expr_list RBRACE   { strncpy($$, "set",     sizeof($$) - 1); }
+    ;
+
+/* ---- Lambda expressions ----------------------------------------------- */
+
+lambda_expr
+    : LAMBDA lambda_param_list COLON expr
+    ;
+
+lambda_param_list
+    : NAME lambda_param_list_tail
+    | STAR NAME
+    | DOUBLESTAR NAME
+    | /* vacío */
+    ;
+
+lambda_param_list_tail
+    : COMMA NAME lambda_param_list_tail
+    | COMMA NAME EQ expr lambda_param_list_tail
+    | COMMA STAR NAME lambda_param_list_tail
+    | COMMA DOUBLESTAR NAME
+    | COMMA
+    | /* vacío */
+    ;
+
+/* ---- Dict literal pairs ----------------------------------------------- */
+
+dict_pairs
+    : expr COLON expr dict_pairs_tail
+    | DOUBLESTAR expr dict_pairs_tail
+    ;
+
+dict_pairs_tail
+    : COMMA expr COLON expr dict_pairs_tail
+    | COMMA DOUBLESTAR expr dict_pairs_tail
+    | COMMA
+    | /* vacío */
+    ;
+
+/* ---- List/set comprehension filter ------------------------------------ */
+
+comp_if
+    : IF or_expr comp_if
+    | /* vacío */
+    ;
+
+/* ---- Class definition -------------------------------------------------- */
+
+class_def
+    : CLASS NAME COLON suite
+    | CLASS NAME LPAREN arg_seq RPAREN COLON suite
+    ;
+
+/* ---- Try / except / finally ------------------------------------------- */
+
+try_stmt
+    : TRY COLON suite except_clauses
+    | TRY COLON suite except_clauses ELSE COLON suite
+    | TRY COLON suite except_clauses FINALLY COLON suite
+    | TRY COLON suite except_clauses ELSE COLON suite FINALLY COLON suite
+    | TRY COLON suite FINALLY COLON suite
+    ;
+
+except_clauses
+    : except_clause except_clauses
+    | except_clause
+    ;
+
+except_clause
+    : EXCEPT COLON suite
+    | EXCEPT expr COLON suite
+    | EXCEPT expr AS NAME COLON suite
     ;
 
 %%
