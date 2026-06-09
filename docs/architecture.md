@@ -40,8 +40,8 @@ and a prototype differentiator around validated Triton kernel generation.
   constrained generation experiments.
 - `compiler/`: the LEX/YACC syntax validator for the course requirement.
 - `scripts/`: operational one-file entry points, currently the Modal vLLM app.
-- `apps/`: multi-file agent-loop adapters. `apps/agent/` contains the current
-  Pi Agent tool package.
+- `apps/`: future multi-file agent-loop adapters. The first candidate to study is
+  Pi Agent and its plugin system.
 - `vendor/TritonBench/`: upstream benchmark data and scripts. Treat as read-mostly.
 - `runs/`: generated inference/evaluation ledgers. This is intentionally ignored.
 
@@ -50,7 +50,8 @@ and a prototype differentiator around validated Triton kernel generation.
 The current target is a validation loop, not a broad application shell. The loop
 should accept a generated Triton kernel, run a basic semantic checker, validate it
 against known-good kernels and values, and record reproducible metrics. Pi Agent
-orchestrates this loop through tools in `apps/agent/extensions/`.
+is the main candidate for orchestrating this loop once its plugin architecture is
+understood.
 
 The constrained-decoding backend is currently XGrammar through vLLM structured
 outputs on Modal. Keep grammar work focused on `grammar/triton.gbnf` and tests

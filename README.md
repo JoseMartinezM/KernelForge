@@ -18,7 +18,8 @@ interfaces around that package.
 - Design constrained-generation grammars that make invalid or non-existent Triton
   APIs harder for the model to emit.
 - Build toward a differentiator: an agent loop for developing kernels. The
-  current implementation uses **Pi Agent** tools under `apps/agent/`.
+  current candidate is **Pi Agent**, whose architecture and plugin system need to
+  be studied for compatibility with KernelForge's validation goals.
 - Ship a first MVP validation loop with a basic semantic checker before expanding
   the agent workflow.
 - Implement a LEX/YACC syntax validator for the course requirement.
@@ -34,9 +35,10 @@ development loop:
 3. Validate candidates against known-good kernels and values.
 4. Record benchmark results in reproducible ledgers.
 
-Pi Agent is the current agent-loop adapter. Its tools call KernelForge scripts
-for task loading, semantic checks, optional constrained decoding, Modal
-validation, and result ledger writes without forcing a large repo reshaping.
+Pi Agent is the main agent-loop option to evaluate. The evaluation should focus
+on whether its plugin system can call KernelForge benchmark loaders, semantic
+checks, constrained decoding, and validation steps without forcing a large repo
+reshaping.
 
 The constrained-decoding path is now centered on XGrammar through the Modal vLLM
 backend's structured-output support. `grammar/triton.gbnf` is the active grammar
@@ -56,7 +58,7 @@ debugging, but the production smoke tests should exercise the vLLM/XGrammar path
 │   ├── benchmark/           # TritonBench loaders, prompts, inference, results
 │   └── grammar/             # Python grammar/constrained-generation utilities
 ├── tests/                   # Future CPU-first test suites
-├── apps/                    # Agent-loop adapters and multi-file surfaces
+├── apps/                    # Future agent-loop adapters and multi-file surfaces
 ├── vendor/TritonBench/      # Vendored upstream benchmark data/scripts
 └── runs/                    # Generated ledgers/results; git-ignored
 ```
@@ -132,8 +134,6 @@ Keep local `.env*` files uncommitted.
 - `kernelforge.benchmark.llm_results`: JSONL loading, syntax metrics, cost
   estimates, and notebook-friendly tables.
 - `scripts/modal_vllm.py`: Modal deployment for the Gemma 4 E4B vLLM backend.
-- `apps/agent/`: Pi Agent tools for generating, checking, validating, and logging
-  kernels.
 - `grammar/triton.gbnf`: current XGrammar/vLLM constrained-decoding grammar
   experiment.
 

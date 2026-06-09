@@ -5,19 +5,8 @@ import { join } from "path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 
-const SemanticCheckParameters = Type.Object({
-  kernel_code: Type.String({
-    description: "The generated Triton kernel Python code to check.",
-  }),
-});
-
-type SemanticCheckDetails = {
-  error: string | null;
-  warnings: string[];
-};
-
 export default function (pi: ExtensionAPI) {
-  pi.registerTool<typeof SemanticCheckParameters, SemanticCheckDetails>({
+  pi.registerTool({
     name: "run_semantic_check",
     label: "Run Semantic Check",
     description:
@@ -25,7 +14,11 @@ export default function (pi: ExtensionAPI) {
       "Detects common Triton anti-patterns: missing @triton.jit, missing mask on vectorized tl.load/tl.store, " +
       "missing tl.program_id, and BLOCK_SIZE used without tl.constexpr. " +
       "Call this after generate_kernel and before validate_kernel to catch obvious errors cheaply.",
-    parameters: SemanticCheckParameters,
+    parameters: Type.Object({
+      kernel_code: Type.String({
+        description: "The generated Triton kernel Python code to check.",
+      }),
+    }),
     async execute(toolCallId, params, signal) {
       const tmpFile = join(tmpdir(), `kernelforge_check_${toolCallId}.py`);
 
@@ -41,7 +34,7 @@ export default function (pi: ExtensionAPI) {
         if (result.code !== 0) {
           return {
             content: [{ type: "text", text: `Semantic check failed to run:\n${result.stderr}` }],
-            details: { error: result.stderr, warnings: [] },
+            details: { error: result.stderr },
           };
         }
 
@@ -55,7 +48,7 @@ export default function (pi: ExtensionAPI) {
 
         return {
           content: [{ type: "text", text: summary }],
-          details: { error: null, warnings },
+          details: { warnings },
         };
       } finally {
         try {

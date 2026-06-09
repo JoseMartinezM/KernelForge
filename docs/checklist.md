@@ -18,7 +18,7 @@ mark the item as `[x]` here and close the issue.
     Modal stays unchanged — Pi orchestrates locally and calls Modal via the existing CLI.
   - Extra credential needed: `ANTHROPIC_API_KEY` for the Pi agent brain (separate from
     Lightning and Modal keys already in use).
-  - Agent code goes under `apps/agent/` as a Pi package.
+  - Agent code goes under `apps/kernelforge-agent/` as a Pi package.
 
 - [x] **Design the MVP validation loop**
   - Workflow: generate kernel → semantic check → validate with GPU → write ledger.
@@ -27,15 +27,13 @@ mark the item as `[x]` here and close the issue.
     `write_ledger` tool.
   - Output: a JSONL row written to `runs/` with call@1, exe@1, semantic_warnings, and
     model/provider metadata.
-  - Each step maps to one Pi tool in `apps/agent/extensions/`.
+  - Each step maps to one Pi tool in `apps/kernelforge-agent/extensions/`.
 
-- [x] **Implement the agent tools in `apps/agent/`**
-  - [x] `search_triton_docs` — returns concise local Triton guidance before generation.
-  - [x] `generate_kernel` — calls `scripts/generate_kernel.py` with the task entry
-    and returns the generated code. Supports optional `grammar/triton.gbnf`
-    constrained generation through XGrammar.
-  - [x] `run_semantic_check` — wraps
-    `src/kernelforge/benchmark/semantic_checker.py` as a Pi tool.
+- [ ] **Implement the agent tools in `apps/agent/`**
+  - [ ] `generate_kernel` — calls `uv run python -m kernelforge.benchmark.llm_inference`
+    with the task entry and returns the generated code.
+  - [ ] `run_semantic_check` — semantic checker exists in `src/kernelforge/benchmark/semantic_checker.py`;
+    needs a Pi tool wrapper in `apps/agent/extensions/`.
   - [x] `validate_kernel` — runs the generated kernel against the TritonBench reference
     and returns call@1, exe@1, mismatches, and semantic_warnings. Requires GPU.
     - [x] Create `scripts/modal_eval.py` with a Modal T4 function that accepts
@@ -43,8 +41,8 @@ mark the item as `[x]` here and close the issue.
     - [x] Test the Modal eval function standalone with one known-good kernel.
     - [x] Wire the Modal eval function as the backend for the `validate_kernel` Pi tool
       in `apps/agent/extensions/validate-kernel.ts`.
-  - [x] `write_ledger` — appends the result object as a JSONL row under
-    `runs/agent/`.
+  - [ ] `write_ledger` — appends the result object as a JSONL row to `runs/`
+    using the same schema as existing inference ledgers.
 
 ---
 
