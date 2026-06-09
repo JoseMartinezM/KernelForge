@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_t/log_softmax_linear",
+  "source_file": "vendor/TritonBench/data/TritonBench_T_v1/log_softmax_linear.py",
+  "entry_file": "log_softmax_linear.py",
+  "tags": ["tritonbench_t", "torch", "cuda", "linear", "log_softmax"]
+}

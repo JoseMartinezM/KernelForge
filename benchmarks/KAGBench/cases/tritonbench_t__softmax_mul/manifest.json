@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_t/softmax_mul",
+  "source_file": "vendor/TritonBench/data/TritonBench_T_v1/softmax_mul.py",
+  "entry_file": "softmax_mul.py",
+  "tags": ["tritonbench_t", "torch", "cuda", "softmax", "elementwise"]
+}

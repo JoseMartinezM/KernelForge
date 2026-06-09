@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_t/scaled_add_norm",
+  "source_file": "vendor/TritonBench/data/TritonBench_T_v1/scaled_add_norm.py",
+  "entry_file": "scaled_add_norm.py",
+  "tags": ["tritonbench_t", "torch", "cuda", "inplace", "reduction", "norm"]
+}

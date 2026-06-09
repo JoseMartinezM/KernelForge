@@ -307,7 +307,9 @@ class WorkflowConfig:
     implementer_model: str
     out_dir: Path
     run_id: str = field(default_factory=lambda: now_iso().replace(":", "").replace("+", "Z"))
+    mode: str = "full-agent"
     candidates_per_attempt: int = 1
+    repair_candidates_per_attempt: int | None = None
     max_repairs: int = 0
     eval_backend: str = "none"
     eval_timeout_s: int = 180
@@ -318,6 +320,7 @@ class WorkflowConfig:
     config_path: Path = Path("src/kernelforge/benchmark/llm_models.json")
     teacher_generation: dict[str, Any] = field(default_factory=dict)
     implementer_generation: dict[str, Any] = field(default_factory=dict)
+    reuse_generations_from: Path | None = None
 
 
 @dataclass(frozen=True)

@@ -39,7 +39,11 @@ jit-decorator ::= "@triton.jit" call? "\n"
 
 function-header ::= "def" ws name ws "(" nl-ws parameters? nl-ws ")" ws ":"
 parameters ::= parameter (nl-ws "," nl-ws parameter)* nl-ws ","?
-parameter ::= name annotation? default-value?
+# In generated kernels, JIT parameters should be unannotated except for
+# compile-time constants.  This prevents hallucinated runtime annotations such
+# as `dtype: tl.dtype`, pointer annotations, or torch/Python type annotations.
+parameter ::= name parameter-annotation? default-value?
+parameter-annotation ::= ws ":" ws "tl" ws "." ws "constexpr"
 annotation ::= ws ":" ws expr
 default-value ::= ws "=" ws expr
 
@@ -158,14 +162,18 @@ power ::= primary (ws "**" ws unary)?
 primary ::= atom trailer*
 trailer ::= ws "." ws name | ws call | ws subscription
 call ::= "(" nl-ws arguments? nl-ws ")"
-arguments ::= argument (nl-ws "," nl-ws argument)* nl-ws ","?
-argument ::= name ws "=" ws expr | expr
+arguments ::= positional-arguments (nl-ws "," nl-ws keyword-arguments)? nl-ws ","? | keyword-arguments nl-ws ","?
+positional-arguments ::= expr (nl-ws "," nl-ws expr)*
+keyword-arguments ::= keyword-argument (nl-ws "," nl-ws keyword-argument)*
+keyword-argument ::= name ws "=" ws expr
 
 subscription ::= "[" nl-ws slices? nl-ws "]"
 slices ::= slice-item (nl-ws "," nl-ws slice-item)* nl-ws ","?
 slice-item ::= expr? ws ":" ws expr? (ws ":" ws expr?)? | expr
 
 atom ::= name | number | string | "True" | "False" | "None" | "(" nl-ws expr-list? nl-ws ")" | "[" nl-ws expr-list? nl-ws "]"
+
+# triton anti-patterns
 
 # =========================
 # Lexical building blocks

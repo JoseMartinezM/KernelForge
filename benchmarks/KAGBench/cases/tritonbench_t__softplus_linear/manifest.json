@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_t/softplus_linear",
+  "source_file": "vendor/TritonBench/data/TritonBench_T_v1/softplus_linear.py",
+  "entry_file": "softplus_linear.py",
+  "tags": ["tritonbench_t", "torch", "cuda", "linear", "softplus"]
+}

@@ -94,10 +94,12 @@ def cmd_run(args: argparse.Namespace) -> int:
     grammar_file = None if args.no_grammar else args.grammar_file
     config = WorkflowConfig(
         run_id=run_id,
+        mode=args.mode,
         teacher_model=args.teacher_model,
         implementer_model=args.implementer_model,
         out_dir=out_dir,
         candidates_per_attempt=args.candidates,
+        repair_candidates_per_attempt=args.repair_candidates,
         max_repairs=args.max_repairs,
         eval_backend=args.eval_backend,
         eval_timeout_s=args.eval_timeout,
@@ -110,6 +112,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         implementer_generation=_json_generation_args(
             args.implementer_max_tokens, args.implementer_temperature
         ),
+        reuse_generations_from=args.reuse_generations_from,
     )
     workflow = KernelGenerationWorkflow(config)
     if args.dry_run:
@@ -148,9 +151,20 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--config", type=Path, default=Path("src/kernelforge/benchmark/llm_models.json"))
     run_parser.add_argument("--run-id", default=WorkflowConfig("", "", Path(".")).run_id)
     run_parser.add_argument("--out", type=Path)
+    run_parser.add_argument(
+        "--mode",
+        choices=("full-agent", "direct-best-of-k"),
+        default="full-agent",
+        help="Workflow arm to run. direct-best-of-k skips teacher planning and repair.",
+    )
     run_parser.add_argument("--teacher-model", default="lightning-ai/deepseek-v4-pro")
     run_parser.add_argument("--implementer-model", default="google/gemma-4-E4B-it")
     run_parser.add_argument("--candidates", type=int, default=1)
+    run_parser.add_argument(
+        "--repair-candidates",
+        type=int,
+        help="Candidates per repair attempt. Defaults to --candidates.",
+    )
     run_parser.add_argument("--max-repairs", type=int, default=0)
     run_parser.add_argument("--eval-backend", choices=("none", "local", "modal"), default="none")
     run_parser.add_argument("--eval-timeout", type=int, default=180)
@@ -163,6 +177,15 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--implementer-max-tokens", type=int)
     run_parser.add_argument("--teacher-temperature", type=float)
     run_parser.add_argument("--implementer-temperature", type=float)
+    run_parser.add_argument(
+        "--reuse-generations-from",
+        type=Path,
+        help=(
+            "Seed this run from another agent run directory or generation.jsonl. "
+            "Teacher plans and evaluatable candidate code are reused, while "
+            "old evaluations and summaries are ignored."
+        ),
+    )
     run_parser.add_argument("--dry-run", action="store_true")
     run_parser.set_defaults(func=cmd_run)
     return parser

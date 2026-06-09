@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import copy
 import json
 import os
 import re
@@ -154,6 +155,135 @@ def _make_test_script(impl_code: str, test_code: str) -> str:
     )
 
 
+def _benchmark_prelude(warmup: int, rep: int) -> str:
+    return f"""
+import json as _tb_json
+import os as _tb_os
+import torch as _tb_torch
+import triton as _tb_triton
+
+_tb_benchmark_results = {{}}
+
+def _tb_jsonable(value):
+    if isinstance(value, (list, tuple)):
+        return [_tb_jsonable(item) for item in value]
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return value
+
+def _tb_record_benchmark(name, op):
+    try:
+        _tb_torch.cuda.synchronize()
+        op()
+        _tb_torch.cuda.synchronize()
+        result = _tb_triton.testing.do_bench(
+            op,
+            warmup={warmup},
+            rep={rep},
+            quantiles=[0.5, 0.2, 0.8],
+        )
+        values = result if isinstance(result, (list, tuple)) else [result]
+        _tb_benchmark_results[str(name)] = {{
+            "ms": float(values[0]),
+            "p20_ms": float(values[1]) if len(values) > 1 else None,
+            "p80_ms": float(values[2]) if len(values) > 2 else None,
+        }}
+    except Exception as exc:
+        _tb_benchmark_results[str(name)] = {{"error": str(exc)}}
+
+"""
+
+
+def _benchmark_footer() -> str:
+    return """
+with open(_tb_os.environ["TRITONBENCH_BENCHMARK_PATH"], "w", encoding="utf-8") as _tb_f:
+    _tb_json.dump(_tb_benchmark_results, _tb_f, indent=2)
+"""
+
+
+class _BenchmarkCallInstrumenter(ast.NodeTransformer):
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST:
+        node = self.generic_visit(node)
+        if not node.name.startswith("test_"):
+            return node
+
+        instrumented_body: list[ast.stmt] = []
+        for statement in node.body:
+            instrumented_body.append(statement)
+            if benchmark_statement := _make_benchmark_statement(statement):
+                instrumented_body.append(benchmark_statement)
+        node.body = instrumented_body
+        return node
+
+
+def _make_benchmark_statement(statement: ast.stmt) -> ast.stmt | None:
+    if not isinstance(statement, ast.Assign) or not isinstance(statement.value, ast.Call):
+        return None
+
+    result_target = next(
+        (
+            target
+            for target in statement.targets
+            if isinstance(target, ast.Subscript)
+            and isinstance(target.value, ast.Name)
+            and target.value.id == "results"
+        ),
+        None,
+    )
+    if result_target is None:
+        return None
+
+    key = copy.deepcopy(result_target.slice)
+    call = copy.deepcopy(statement.value)
+    benchmark_statement = ast.Expr(
+        value=ast.Call(
+            func=ast.Name(id="_tb_record_benchmark", ctx=ast.Load()),
+            args=[
+                key,
+                ast.Lambda(
+                    args=ast.arguments(
+                        posonlyargs=[],
+                        args=[],
+                        kwonlyargs=[],
+                        kw_defaults=[],
+                        defaults=[],
+                    ),
+                    body=call,
+                ),
+            ],
+            keywords=[],
+        )
+    )
+    return ast.copy_location(benchmark_statement, statement)
+
+
+def _instrument_test_code_for_benchmark(test_code: str) -> str:
+    tree = ast.parse(test_code)
+    tree = _BenchmarkCallInstrumenter().visit(tree)
+    ast.fix_missing_locations(tree)
+    return ast.unparse(tree)
+
+
+def _make_benchmark_script(
+    impl_code: str,
+    test_code: str,
+    *,
+    warmup: int,
+    rep: int,
+) -> str:
+    return f"""{impl_code.rstrip()}
+
+{TB_SEPARATOR}
+
+{_benchmark_prelude(warmup, rep)}
+
+{_instrument_test_code_for_benchmark(test_code).rstrip()}
+
+{_benchmark_footer()}
+"""
+
+
 def _coerce_timeout_stream(value: str | bytes | None) -> str:
     if value is None:
         return ""
@@ -204,10 +334,72 @@ def _run_test_script(
     }
 
 
+def _run_benchmark_script(
+    impl_code: str,
+    test_code: str,
+    benchmark_path: str | Path,
+    timeout: int,
+    warmup: int,
+    rep: int,
+) -> dict[str, Any]:
+    benchmark_path = Path(benchmark_path)
+    benchmark_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        script = _make_benchmark_script(
+            impl_code,
+            test_code,
+            warmup=warmup,
+            rep=rep,
+        )
+    except SyntaxError as exc:
+        return {
+            "ok": False,
+            "returncode": None,
+            "stdout": "",
+            "stderr": f"benchmark instrumentation failed: {exc}",
+        }
+
+    with tempfile.TemporaryDirectory(prefix="tritonbench_bench_") as workdir:
+        script_path = Path(workdir) / "case.py"
+        script_path.write_text(script, encoding="utf-8")
+
+        env = os.environ.copy()
+        env["TRITONBENCH_BENCHMARK_PATH"] = str(benchmark_path)
+        try:
+            run = subprocess.run(
+                [sys.executable, str(script_path)],
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                env=env,
+                check=False,
+            )
+        except subprocess.TimeoutExpired as exc:
+            return {
+                "ok": False,
+                "returncode": None,
+                "stdout": _coerce_timeout_stream(exc.stdout),
+                "stderr": _coerce_timeout_stream(exc.stderr)
+                or f"timed out after {timeout}s",
+            }
+
+    return {
+        "ok": run.returncode == 0,
+        "returncode": run.returncode,
+        "stdout": run.stdout,
+        "stderr": run.stderr,
+    }
+
+
 def _load_torch_result(result_path: str | Path) -> Any:
     import torch
 
     return torch.load(result_path, map_location="cpu", weights_only=False)
+
+
+def _load_json_result(result_path: str | Path) -> Any:
+    with open(result_path, encoding="utf-8") as f:
+        return json.load(f)
 
 
 def _compare_values(actual: Any, expected: Any, where: str) -> list[str]:
@@ -259,10 +451,95 @@ def compare_results(
     return _compare_values(pred_result, ref_result, "test_results")
 
 
+def _summarize_benchmarks(
+    pred_cases: dict[str, Any],
+    ref_cases: dict[str, Any],
+) -> dict[str, Any]:
+    cases: dict[str, Any] = {}
+    total_pred_ms = 0.0
+    total_ref_ms = 0.0
+    measured = 0
+
+    for case_name in sorted(set(pred_cases) | set(ref_cases)):
+        pred = pred_cases.get(case_name) or {}
+        ref = ref_cases.get(case_name) or {}
+        pred_ms = pred.get("ms") if isinstance(pred, dict) else None
+        ref_ms = ref.get("ms") if isinstance(ref, dict) else None
+
+        case = {"pred": pred, "ref": ref, "pred_ms": pred_ms, "ref_ms": ref_ms}
+        if isinstance(pred_ms, int | float) and isinstance(ref_ms, int | float):
+            case["speedup"] = ref_ms / pred_ms if pred_ms else None
+            total_pred_ms += float(pred_ms)
+            total_ref_ms += float(ref_ms)
+            measured += 1
+        else:
+            case["speedup"] = None
+        cases[case_name] = case
+
+    pred_ms = total_pred_ms if measured else None
+    ref_ms = total_ref_ms if measured else None
+    return {
+        "pred_ms": pred_ms,
+        "ref_ms": ref_ms,
+        "speedup": (ref_ms / pred_ms) if pred_ms else None,
+        "measured_cases": measured,
+        "cases": cases,
+    }
+
+
+def _benchmark_entry(
+    entry: dict[str, Any],
+    pred_code: str,
+    workdir_path: Path,
+    timeout: int,
+    warmup: int,
+    rep: int,
+) -> dict[str, Any]:
+    pred_benchmark_path = workdir_path / "pred_benchmark.json"
+    ref_benchmark_path = workdir_path / "ref_benchmark.json"
+
+    pred = _run_benchmark_script(
+        pred_code,
+        entry["test_code"],
+        pred_benchmark_path,
+        timeout=timeout,
+        warmup=warmup,
+        rep=rep,
+    )
+    ref = _run_benchmark_script(
+        entry["ref_code"],
+        entry["test_code"],
+        ref_benchmark_path,
+        timeout=timeout,
+        warmup=warmup,
+        rep=rep,
+    )
+
+    result: dict[str, Any] = {"pred": pred, "ref": ref}
+    if pred["ok"] and ref["ok"]:
+        pred_cases = _load_json_result(pred_benchmark_path)
+        ref_cases = _load_json_result(ref_benchmark_path)
+        result.update(_summarize_benchmarks(pred_cases, ref_cases))
+    else:
+        result.update(
+            {
+                "pred_ms": None,
+                "ref_ms": None,
+                "speedup": None,
+                "measured_cases": 0,
+                "cases": {},
+            }
+        )
+    return result
+
+
 def evaluate_entry(
     entry: dict[str, Any],
     pred_code: str,
     timeout: int = 180,
+    benchmark: bool = False,
+    benchmark_warmup: int = 25,
+    benchmark_rep: int = 100,
 ) -> dict[str, Any]:
     pred_code = cleanup_generated_code(pred_code)
 
@@ -309,7 +586,18 @@ def evaluate_entry(
 
         mismatches = compare_results(pred_result_path, ref_result_path)
 
-    return {
+        benchmark_result = None
+        if benchmark and not mismatches:
+            benchmark_result = _benchmark_entry(
+                entry,
+                pred_code,
+                workdir_path,
+                timeout=timeout,
+                warmup=benchmark_warmup,
+                rep=benchmark_rep,
+            )
+
+    result = {
         "file": entry["file"],
         "call@1": True,
         "exe@1": not mismatches,
@@ -317,3 +605,10 @@ def evaluate_entry(
         "pred": pred,
         "mismatches": mismatches,
     }
+    if benchmark_result is not None:
+        result["benchmark"] = benchmark_result
+        result["pred_ms"] = benchmark_result["pred_ms"]
+        result["ref_ms"] = benchmark_result["ref_ms"]
+        result["speedup"] = benchmark_result["speedup"]
+        result["execution_time"] = benchmark_result["pred_ms"]
+    return result

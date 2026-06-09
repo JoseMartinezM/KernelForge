@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_t/mul_relu",
+  "source_file": "vendor/TritonBench/data/TritonBench_T_v1/mul_relu.py",
+  "entry_file": "mul_relu.py",
+  "tags": ["tritonbench_t", "torch", "cuda", "activation", "relu", "elementwise"]
+}

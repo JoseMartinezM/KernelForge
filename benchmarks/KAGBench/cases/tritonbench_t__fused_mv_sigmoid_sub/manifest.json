@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_t/fused_mv_sigmoid_sub",
+  "source_file": "vendor/TritonBench/data/TritonBench_T_v1/fused_mv_sigmoid_sub.py",
+  "entry_file": "fused_mv_sigmoid_sub.py",
+  "tags": ["tritonbench_t", "torch", "cuda", "matrix-vector", "sigmoid", "sub"]
+}

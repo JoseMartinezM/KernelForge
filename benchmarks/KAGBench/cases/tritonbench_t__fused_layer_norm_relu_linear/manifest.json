@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_t/fused_layer_norm_relu_linear",
+  "source_file": "vendor/TritonBench/data/TritonBench_T_v1/fused_layer_norm_relu_linear.py",
+  "entry_file": "fused_layer_norm_relu_linear.py",
+  "tags": ["tritonbench_t", "torch", "cuda", "linear", "relu", "layer_norm"]
+}

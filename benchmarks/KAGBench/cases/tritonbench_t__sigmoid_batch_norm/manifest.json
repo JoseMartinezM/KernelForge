@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_t/sigmoid_batch_norm",
+  "source_file": "vendor/TritonBench/data/TritonBench_T_v1/sigmoid_batch_norm.py",
+  "entry_file": "sigmoid_batch_norm.py",
+  "tags": ["tritonbench_t", "torch", "cuda", "batch_norm", "sigmoid", "activation"]
+}

@@ -29,8 +29,10 @@ vllm_image = (
     )
 )
 
-MODEL_NAME = "google/gemma-4-E4B-it"
-MODEL_REVISION = "d6436b3d62967e1af08bbb046c6300b2a9ae8e85"
+MODEL_NAME = os.environ.get("KF_MODAL_MODEL", "google/gemma-4-E4B-it")
+MODEL_REVISION = os.environ.get(
+    "KF_MODAL_MODEL_REVISION", "d6436b3d62967e1af08bbb046c6300b2a9ae8e85"
+)
 
 SPECULATIVE_MODEL_NAME = "google/gemma-4-E4B-it-assistant"
 SPECULATIVE_MODEL_REVISION = "4a5c666f89be588c72e0b3a9b49c118513cedff6"
@@ -38,17 +40,20 @@ SPECULATIVE_MODEL_REVISION = "4a5c666f89be588c72e0b3a9b49c118513cedff6"
 hf_cache_vol = modal.Volume.from_name("huggingface-cache", create_if_missing=True)
 vllm_cache_vol = modal.Volume.from_name("vllm-cache", create_if_missing=True)
 
-app = modal.App("kernelforge-vllm")
+APP_NAME = os.environ.get("KF_MODAL_APP_NAME", "kernelforge-vllm-a100-16k")
+app = modal.App(APP_NAME)
 
 N_GPU = 1
-GPU_TYPE = os.environ.get("KF_MODAL_GPU", "L4")
+GPU_TYPE = os.environ.get("KF_MODAL_GPU", "A100-40GB")
 MINUTES = 60  # seconds
 VLLM_PORT = 8000
 MAX_INPUTS = int(os.environ.get("KF_MODAL_MAX_INPUTS", "4"))
-MAX_MODEL_LEN = int(os.environ.get("KF_MODAL_MAX_MODEL_LEN", "12288"))
+MAX_MODEL_LEN = int(os.environ.get("KF_MODAL_MAX_MODEL_LEN", "16384"))
 GPU_MEMORY_UTILIZATION = float(os.environ.get("KF_MODAL_GPU_MEMORY_UTILIZATION", "0.82"))
 MIN_CONTAINERS = int(os.environ.get("KF_MODAL_MIN_CONTAINERS", "0"))
 WARMUP_REQUESTS = int(os.environ.get("KF_MODAL_WARMUP_REQUESTS", "1"))
+QUANTIZATION = os.environ.get("KF_MODAL_QUANTIZATION", "none").strip()
+KV_CACHE_DTYPE = os.environ.get("KF_MODAL_KV_CACHE_DTYPE", "auto").strip()
 
 with vllm_image.imports():
     import requests
@@ -193,6 +198,11 @@ class VllmServer:
             "--structured-outputs-config.enable_in_reasoning=False",
         ]
 
+        if QUANTIZATION and QUANTIZATION.lower() != "none":
+            cmd += ["--quantization", QUANTIZATION]
+        if KV_CACHE_DTYPE and KV_CACHE_DTYPE.lower() != "auto":
+            cmd += ["--kv-cache-dtype", KV_CACHE_DTYPE]
+
         # assume multiple GPUs are for splitting up large matrix multiplications
         cmd += ["--tensor-parallel-size", str(N_GPU)]
 
@@ -240,6 +250,7 @@ async def test(
     proxy_key=None,
     proxy_secret=None,
 ):
+    test_timeout = int(test_timeout)
     twice = parse_bool(twice)
     print("Resolving Modal web URL", flush=True)
     url = await asyncio.to_thread(VllmServer().serve.get_web_url)

@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_t/fused_hardsigmoid_batch_norm",
+  "source_file": "vendor/TritonBench/data/TritonBench_T_v1/fused_hardsigmoid_batch_norm.py",
+  "entry_file": "fused_hardsigmoid_batch_norm.py",
+  "tags": ["tritonbench_t", "torch", "cuda", "batch_norm", "hardsigmoid", "activation"]
+}

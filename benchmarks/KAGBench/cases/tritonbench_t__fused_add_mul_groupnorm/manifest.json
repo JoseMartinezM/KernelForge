@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_t/fused_add_mul_groupnorm",
+  "source_file": "vendor/TritonBench/data/TritonBench_T_v1/fused_add_mul_groupnorm.py",
+  "entry_file": "fused_add_mul_groupnorm.py",
+  "tags": ["tritonbench_t", "torch", "cuda", "add", "mul", "group_norm"]
+}

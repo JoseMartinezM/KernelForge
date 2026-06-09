@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 from kernelforge.agent.prompts import (
+    build_direct_implementer_messages,
     build_implementer_messages,
     build_teacher_messages,
     parse_teacher_plan,
@@ -49,31 +50,41 @@ def test_implementer_prompt_uses_teacher_plan_and_visible_task_fields_only():
     assert "tl.device_ptr" in rendered
     assert "tensor.data_ptr()" in rendered
     assert "tl.float32" in rendered
-    assert "tl.dtype" in rendered
-    assert "stream=" in rendered
+    assert "torch.dtype" in rendered
+    assert "CUDA streams" in rendered
     assert "torch.tensor" in rendered
     assert "tl.arange(0, BLOCK_SIZE)" in rendered
     assert "x.stride(dim)" in rendered
     assert "contiguous input copy" in rendered
 
 
+def test_direct_implementer_prompt_has_no_teacher_plan_and_uses_visible_task_fields_only():
+    messages = build_direct_implementer_messages(fake_task())
+    rendered = json.dumps(messages)
+
+    assert "Implement add" in rendered
+    assert "PUBLIC_VISIBLE_TESTS" in rendered
+    assert "SECRET_HIDDEN_TESTS" not in rendered
+    assert "SECRET_SOURCE_PATH" not in rendered
+    assert "SECRET_SOURCE_CONTENT" not in rendered
+    assert "teacher_plan" not in rendered
+    assert "tl.device_ptr" in rendered
+
+
 def test_teacher_plan_parser_is_tolerant_xmlish_not_strict_xml():
     sections, warnings = parse_teacher_plan(
         """
         <kernel_plan>
-        <api>Implement add(x, y)</api>
-        <behavior>Return x < y comparison if requested by prompt.</behavior>
-        <triton_mapping>1D grid</triton_mapping>
-        <memory>load/store flattened offsets</memory>
-        <masks>offsets < n</masks>
+        <pattern>elementwise</pattern>
+        <api_contract>Implement add(x, y)</api_contract>
+        <program_mapping>1D grid; offsets < n</program_mapping>
         <numerics>preserve dtype</numerics>
-        <wrapper>allocate output</wrapper>
-        <edge_cases>odd sizes</edge_cases>
-        <failure_modes>missing mask</failure_modes>
+        <non_defaults>none</non_defaults>
+        <risks>missing mask</risks>
         </kernel_plan>
         """
     )
 
-    assert sections["api"] == "Implement add(x, y)"
-    assert sections["behavior"] == "Return x < y comparison if requested by prompt."
+    assert sections["api_contract"] == "Implement add(x, y)"
+    assert sections["program_mapping"] == "1D grid; offsets < n"
     assert warnings == []

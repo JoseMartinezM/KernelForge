@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from threading import Lock
 from typing import Any, Iterable
 
 from .grammar import grammar_metadata
@@ -25,6 +26,7 @@ class AgentRunLedger:
         self.generation_path = self.out_dir / "generation.jsonl"
         self.evaluation_path = self.out_dir / "evaluation.jsonl"
         self.summary_path = self.out_dir / "summary.jsonl"
+        self._write_lock = Lock()
 
     @property
     def paths(self) -> dict[str, str]:
@@ -44,9 +46,11 @@ class AgentRunLedger:
             "created_at": now_iso(),
             "run_id": config.run_id,
             "out_dir": str(self.out_dir),
+            "mode": config.mode,
             "teacher_model": config.teacher_model,
             "implementer_model": config.implementer_model,
             "candidates_per_attempt": config.candidates_per_attempt,
+            "repair_candidates_per_attempt": config.repair_candidates_per_attempt,
             "max_repairs": config.max_repairs,
             "eval_backend": config.eval_backend,
             "eval_timeout_s": config.eval_timeout_s,
@@ -56,6 +60,7 @@ class AgentRunLedger:
             "grammar_backend": config.grammar_backend,
             "teacher_generation": config.teacher_generation,
             "implementer_generation": config.implementer_generation,
+            "reuse_generations_from": config.reuse_generations_from,
             "task_count": len(task_list),
             "tasks": [
                 {
@@ -75,10 +80,13 @@ class AgentRunLedger:
         return self.manifest_path
 
     def append_generation(self, row: dict[str, Any]) -> None:
-        append_jsonl(self.generation_path, row)
+        with self._write_lock:
+            append_jsonl(self.generation_path, row)
 
     def append_evaluation(self, row: dict[str, Any]) -> None:
-        append_jsonl(self.evaluation_path, row)
+        with self._write_lock:
+            append_jsonl(self.evaluation_path, row)
 
     def append_summary(self, row: dict[str, Any]) -> None:
-        append_jsonl(self.summary_path, row)
+        with self._write_lock:
+            append_jsonl(self.summary_path, row)

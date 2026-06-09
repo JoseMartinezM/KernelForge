@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_t/normalized_cosine_similarity",
+  "source_file": "vendor/TritonBench/data/TritonBench_T_v1/normalized_cosine_similarity.py",
+  "entry_file": "normalized_cosine_similarity.py",
+  "tags": ["tritonbench_t", "torch", "cuda", "similarity", "normalization"]
+}

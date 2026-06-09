@@ -74,3 +74,34 @@ def test_jit_call_rejects_positional_argument_after_keyword(triton_xgrammar_jit_
     )
 
     assert not result.accepted
+
+
+def test_jit_parameter_accepts_constexpr_annotation(triton_xgrammar_jit_block):
+    result = triton_xgrammar_jit_block.match(
+        "@triton.jit\n"
+        "def kernel(ptr, BLOCK_SIZE: tl.constexpr):\n"
+        "    offs = tl.arange(0, BLOCK_SIZE)\n"
+        "    x = tl.load(ptr + offs, mask=offs < BLOCK_SIZE)\n"
+    )
+
+    assert result.accepted
+
+
+def test_jit_parameter_rejects_dtype_annotation(triton_xgrammar_jit_block):
+    result = triton_xgrammar_jit_block.match(
+        "@triton.jit\n"
+        "def kernel(ptr, dtype: tl.dtype):\n"
+        "    x = tl.load(ptr + 0)\n"
+    )
+
+    assert not result.accepted
+
+
+def test_jit_accepts_math_attribute_namespace(triton_xgrammar_jit_block):
+    result = triton_xgrammar_jit_block.match(
+        "@triton.jit\n"
+        "def kernel(x):\n"
+        "    y = tl.math.exp2(x)\n"
+    )
+
+    assert result.accepted

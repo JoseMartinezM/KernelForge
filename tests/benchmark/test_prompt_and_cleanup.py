@@ -4,7 +4,12 @@ import ast
 import textwrap
 from pathlib import Path
 
-from kernelforge.benchmark.tritonbench import cleanup_generated_code, make_prompt
+from kernelforge.benchmark.tritonbench import (
+    _instrument_test_code_for_benchmark,
+    _summarize_benchmarks,
+    cleanup_generated_code,
+    make_prompt,
+)
 
 
 def test_make_prompt_omits_empty_optional_sections():
@@ -91,3 +96,38 @@ def test_cleanup_generated_code_returns_invalid_syntax_unchanged():
     raw = "def broken(:\n    pass"
 
     assert cleanup_generated_code(raw) == raw
+
+
+def test_instrument_test_code_for_benchmark_wraps_result_calls():
+    source = textwrap.dedent("""
+        import torch
+
+        def test_div():
+            results = {}
+            input1 = torch.tensor([6.0], device='cuda')
+            other1 = torch.tensor([3.0], device='cuda')
+            results["test_case_1"] = div(input1, other1)
+            return results
+
+        test_results = test_div()
+    """)
+
+    instrumented = _instrument_test_code_for_benchmark(source)
+
+    ast.parse(instrumented)
+    assert "_tb_record_benchmark('test_case_1', lambda: div(input1, other1))" in instrumented
+    assert "test_results = test_div()" in instrumented
+
+
+def test_summarize_benchmarks_reports_total_speedup_for_measured_cases():
+    summary = _summarize_benchmarks(
+        pred_cases={"case_1": {"ms": 2.0}, "case_2": {"error": "failed"}},
+        ref_cases={"case_1": {"ms": 5.0}, "case_2": {"ms": 1.0}},
+    )
+
+    assert summary["pred_ms"] == 2.0
+    assert summary["ref_ms"] == 5.0
+    assert summary["speedup"] == 2.5
+    assert summary["measured_cases"] == 1
+    assert summary["cases"]["case_1"]["speedup"] == 2.5
+    assert summary["cases"]["case_2"]["speedup"] is None

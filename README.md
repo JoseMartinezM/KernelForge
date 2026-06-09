@@ -48,7 +48,7 @@ debugging, but the production smoke tests should exercise the vLLM/XGrammar path
 ```text
 .
 ├── compiler/                # Course LEX/YACC syntax-validator home
-├── benchmarks/KAGBench/     # Small agentic Triton synthesis benchmark
+├── benchmarks/              # First-party benchmark datasets, including KAGBench
 ├── docs/                    # Onboarding, evaluation, architecture notes
 ├── grammar/                 # GBNF grammar assets and viewers
 ├── notebooks/               # Marimo exploration and visualization notebooks

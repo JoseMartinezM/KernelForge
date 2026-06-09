@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_t/add_mean",
+  "source_file": "vendor/TritonBench/data/TritonBench_T_v1/add_mean.py",
+  "entry_file": "add_mean.py",
+  "tags": ["tritonbench_t", "torch", "cuda", "reduction", "mean", "elementwise"]
+}

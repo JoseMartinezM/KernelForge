@@ -67,3 +67,33 @@ def test_workflow_dry_run_uses_llama_cpp_grammar_shape(tmp_path):
     }
     assert "grammar" in payload["implementer_generation"]["extra_body"]
     assert "guided_grammar" not in payload["implementer_generation"]["extra_body"]
+
+
+def test_workflow_dry_run_direct_best_of_k_skips_teacher_prompt(tmp_path):
+    task = KAGBenchTask(
+        task_id="suite/add",
+        entry_file="add.py",
+        prompt="Implement add.",
+        pytorch_reference="def add(x, y): return x + y",
+        public_tests="PUBLIC_TESTS",
+        unit_tests="SECRET_UNIT_TESTS",
+    )
+    config = WorkflowConfig(
+        run_id="dry-run",
+        teacher_model="teacher/model",
+        implementer_model="gemma/model",
+        out_dir=tmp_path / "run",
+        mode="direct-best-of-k",
+        grammar_file=None,
+        candidates_per_attempt=12,
+    )
+
+    payload = KernelGenerationWorkflow(config).dry_run_payload([task])
+    rendered = json.dumps(payload)
+
+    assert payload["mode"] == "direct-best-of-k"
+    assert payload["candidates_per_attempt"] == 12
+    assert payload["tasks"][0]["teacher_messages"] == []
+    assert "PUBLIC_TESTS" in rendered
+    assert "SECRET_UNIT_TESTS" not in rendered
+    assert "teacher_plan" not in rendered

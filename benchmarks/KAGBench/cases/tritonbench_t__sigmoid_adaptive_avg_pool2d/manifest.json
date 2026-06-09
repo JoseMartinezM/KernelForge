@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_t/sigmoid_adaptive_avg_pool2d",
+  "source_file": "vendor/TritonBench/data/TritonBench_T_v1/sigmoid_adaptive_avg_pool2d.py",
+  "entry_file": "sigmoid_adaptive_avg_pool2d.py",
+  "tags": ["tritonbench_t", "torch", "cuda", "pooling", "activation"]
+}

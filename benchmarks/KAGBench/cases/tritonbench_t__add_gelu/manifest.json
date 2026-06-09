@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_t/add_gelu",
+  "source_file": "vendor/TritonBench/data/TritonBench_T_v1/add_gelu.py",
+  "entry_file": "add_gelu.py",
+  "tags": ["tritonbench_t", "torch", "cuda", "activation", "gelu", "elementwise"]
+}

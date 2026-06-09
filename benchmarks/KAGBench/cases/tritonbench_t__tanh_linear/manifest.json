@@ -1,0 +1,6 @@
+{
+  "id": "tritonbench_t/tanh_linear",
+  "source_file": "vendor/TritonBench/data/TritonBench_T_v1/tanh_linear.py",
+  "entry_file": "tanh_linear.py",
+  "tags": ["tritonbench_t", "torch", "cuda", "linear", "activation"]
+}
