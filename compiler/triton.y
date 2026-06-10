@@ -210,7 +210,7 @@ static void print_report(void)
     int flag;
 }
 
-%token <text> NAME STRING NUMBER_INT NUMBER_FLOAT NUMBER_HEX NUMBER_BIN NUMBER_OCT
+%token <text> NAME STRING NUMBER_INT NUMBER_FLOAT NUMBER_HEX NUMBER_BIN
 %token DEF IF ELIF ELSE FOR IN WHILE WITH AS RETURN ASSERT PASS
 %token AND OR NOT IS TRUE FALSE NONE
 %token NEWLINE INDENT DEDENT
@@ -532,8 +532,6 @@ atom
     | NUMBER_HEX
       { $$ = $1; }
     | NUMBER_BIN
-      { $$ = $1; }
-    | NUMBER_OCT
       { $$ = $1; }
     | STRING
       { $$ = $1; }

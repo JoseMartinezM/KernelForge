@@ -270,6 +270,25 @@ class TestScanner:
         finally:
             os.unlink(tmp)
 
+    def test_scanner_omits_octal_number_type(self):
+        """Octal literals are outside the reduced Triton numeric subset."""
+        import tempfile, os
+        src = (
+            "import triton\n\n"
+            "@triton.jit\n"
+            "def k(x_ptr):\n"
+            "    x = 0o755\n"
+        )
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py",
+                                         delete=False, encoding="utf-8") as f:
+            f.write(src)
+            tmp = f.name
+        try:
+            result = _run_scanner(Path(tmp))
+            assert "NUMBER_OCT" not in result.stdout
+        finally:
+            os.unlink(tmp)
+
     def test_scanner_string_types(self):
         """The scanner recognizes string forms inside a Triton JIT block."""
         import tempfile, os

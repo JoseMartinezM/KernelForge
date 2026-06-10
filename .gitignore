@@ -6,6 +6,8 @@ __pycache__/
 __marimo__
 notebooks/tritonbench_refs/
 
+compiler/report/*.pdf
+
 .env*
 
 # C extensions

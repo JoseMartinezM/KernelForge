@@ -4,13 +4,21 @@
   university: "Tecnológico de Monterrey",
   school-name: "Escuela de Ingeniería y Ciencias",
   authors: (),
-  date: datetime.today(),
+  date: datetime(year: 2026, month: 6, day: 10),
   school-color: rgb("#162773"),
   logo: image("tec-de-monterrey-4-logo-png-transparent.png"),
   abstract: none,
   body,
 ) = {
-  set text(lang: "en")
+  set text(lang: "en", font: "New Computer Modern", size: 10.5pt)
+  set page(
+    paper: "a4",
+    margin: (top: 2.2cm, bottom: 2.1cm, x: 2.15cm),
+    numbering: "1",
+    header: align(right)[#text(size: 8pt, fill: rgb("#5f6770"))[Triton GPU Kernel Lexical Analyzer]],
+    footer: align(center)[#text(size: 8pt, fill: rgb("#5f6770"))[#context counter(page).display()]],
+  )
+  set par(leading: 0.62em)
 
   let overlay(img, color) = layout(bounds => {
     let size = measure(img, ..bounds)
@@ -22,6 +30,8 @@
   page(
     margin: 0cm,
     numbering: none,
+    header: none,
+    footer: none,
   )[
     #if logo != none {
       place(
@@ -86,6 +96,7 @@
   if abstract != none {
     page(
       header: none,
+      footer: none,
       numbering: none,
     )[
       #set text(size: 12pt)
@@ -110,6 +121,7 @@
   // --- Table of contents ---
   page(
     header: none,
+    footer: none,
     numbering: none,
   )[
     #show outline.entry.where(level: 1): it => {
@@ -146,5 +158,7 @@
   ]
 
   // --- Content ---
+  pagebreak()
+  counter(page).update(1)
   body
 }

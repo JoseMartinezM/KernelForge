@@ -1,8 +1,64 @@
 #import "lib.typ": report-template
+#import "@preview/finite:0.5.1": automaton
+#import "@preview/fletcher:0.5.8" as fletcher: diagram, node, edge
 
 #set document(title: "Triton GPU Kernel Lexical Analyzer and Parser")
 #set heading(numbering: "1.")
 #set par(justify: true, spacing: 0.65em)
+#set figure(numbering: "1")
+
+#let tec-blue = rgb("#162773")
+#let ink = rgb("#252a31")
+#let muted = rgb("#5f6770")
+#let soft-blue = rgb("#eef3fb")
+#let rule = rgb("#cfd8e3")
+
+#show heading.where(level: 1): it => {
+  pagebreak(weak: true)
+  block(above: 0.4em, below: 0.65em)[
+    #text(fill: tec-blue, weight: "bold")[#it]
+    #v(-0.35em)
+    #line(length: 100%, stroke: 0.7pt + tec-blue)
+  ]
+}
+
+#show heading.where(level: 2): it => {
+  block(above: 0.85em, below: 0.35em)[#text(fill: ink, weight: "bold")[#it]]
+}
+
+#show raw.where(block: true): it => block(
+  width: 100%,
+  inset: 7pt,
+  radius: 3pt,
+  fill: rgb("#f6f8fb"),
+  stroke: 0.45pt + rule,
+)[#text(size: 8.6pt)[#it]]
+
+#let artifact(title, body) = block(
+  width: 100%,
+  inset: 8pt,
+  radius: 4pt,
+  fill: soft-blue,
+  stroke: 0.6pt + rule,
+)[
+  #text(size: 9pt, weight: "bold", fill: tec-blue)[#title]
+  #v(4pt)
+  #body
+]
+
+#let section-note(body) = block(
+  width: 100%,
+  inset: 7pt,
+  radius: 3pt,
+  fill: rgb("#fbfcff"),
+  stroke: (left: 2pt + tec-blue, rest: 0.4pt + rule),
+)[#text(size: 9.4pt)[#body]]
+
+#let mini-source(title, body) = figure(
+  artifact(title, body),
+  kind: image,
+  caption: title,
+)
 
 #show: report-template.with(
   title: "Triton GPU Kernel Lexical Analyzer and Parser",
@@ -15,29 +71,30 @@
     "Victor Javier Quintana Cisneros",
   ),
   abstract: [
-    This report documents the analysis, design, implementation, and testing of a Flex/Bison scanner and parser for a reduced Triton GPU kernel language. The compiler recognizes top-level `@triton.jit` kernel functions, emits a token sequence, builds symbol tables, validates the supported syntax, and reports lexical, syntax, and semantic errors. The implementation uses Flex and Bison directly; it does not use Python's `ast` module or native regular-expression libraries.
+    The project implements and validates a Flex/Bison scanner and parser for a reduced Triton GPU kernel language. The compiler recognizes top-level `@triton.jit` kernel functions, emits a token sequence, builds symbol tables, validates the supported syntax, and reports lexical, syntax, and semantic errors. The implementation uses Flex and Bison directly; it does not use Python's `ast` module or native regular-expression libraries.
   ],
 )
 
 #set table(
-  fill: (x, y) => if y == 0 { rgb("#1a3c5e") } else { none },
-  stroke: 0.8pt + rgb("#cccccc"),
+  fill: (x, y) => if y == 0 { tec-blue } else if calc.odd(y) { rgb("#f7f9fc") } else { none },
+  stroke: 0.5pt + rule,
 )
 
 #show table.cell.where(y: 0): set text(fill: white, weight: "bold")
+#show figure.caption: set text(size: 9pt, fill: muted)
 
 = Introduction <introduction>
 
 == Executive summary <executive-summary>
 
-The commissioned front end is implemented as a Flex/Bison toolchain for a reduced Triton GPU-kernel language. The current delivery has two executables:
+The front end is implemented as a Flex/Bison toolchain for a reduced Triton GPU-kernel language and provides two executables:
 
 - `triton_scanner`, a standalone Flex scanner that prints the token stream for Triton JIT blocks and then prints the scanner symbol table.
 - `triton_compiler`, a Flex/Bison validator that parses the same token stream and prints a structured report of accepted kernels.
 
 The implementation accepts realistic Python/Triton source files while formally processing only top-level `@triton.jit` functions. Host-side Python code is skipped by the scanner, so imports, launch wrappers, allocation code, and tests can remain in the input file without requiring the project to become a full Python compiler.
 
-The current parser recognizes representative Triton kernels such as vector addition, softmax, dropout, matrix multiplication, flash attention, and layer normalization fixtures. On successful input it reports kernel names, formal parameters, `tl.constexpr` parameters, local identifiers, and called `tl.*` APIs. On failure it exits nonzero and reports lexical, syntax, semantic, or missing-kernel diagnostics.
+The parser recognizes representative Triton kernels such as vector addition, softmax, dropout, matrix multiplication, flash attention, and layer normalization fixtures. On successful input it reports kernel names, formal parameters, `tl.constexpr` parameters, local identifiers, and called `tl.*` APIs. On failure it exits nonzero and reports lexical, syntax, semantic, or missing-kernel diagnostics.
 
 == Notation and development model <notation-and-development-model>
 
@@ -45,7 +102,7 @@ The lexical specification is written as regular expressions in Flex. Each expres
 
 The syntax specification is written as context-free productions in Bison. Bison builds an LALR parser from those productions. Scanner actions pass tokens and lexeme text to the parser; parser actions update the kernel report directly. The design deliberately avoids Python's `ast` module and native regular-expression libraries.
 
-The work followed an iterative waterfall model. The stable language boundary was first captured as a reduced Triton kernel subset; the scanner was then implemented and tested; parser coverage was added over the validated token stream; and regression tests were expanded as real fixtures exposed missing syntax. This model is appropriate for the commission because the high-level scope was known early, while the exact grammar details benefited from short validation cycles against concrete Triton examples.
+The work followed an iterative waterfall model. The stable language boundary was first captured as a reduced Triton kernel subset; the scanner was then implemented and tested; parser coverage was added over the validated token stream; and regression tests were expanded as real fixtures exposed missing syntax. This model fit the project scope because the high-level language boundary was known early, while the exact grammar details benefited from short validation cycles against concrete Triton examples.
 
 Flex and Bison are used as the implementation tools because they map directly to the front-end responsibilities: regular-language recognition for lexemes, context-free validation for statements and expressions, and deterministic command-line behavior suitable for automated tests.
 
@@ -58,7 +115,30 @@ Triton kernels are Python functions decorated with `@triton.jit`. A complete sou
 - After the JIT function dedents back to column zero, the scanner returns to host mode.
 - Indented `@triton.jit` decorators are reported as out-of-scope nested JIT blocks.
 
-The supported kernel subset includes decorators, function definitions, parameters, `tl.constexpr` annotations, assignments, augmented assignments, returns, assertions, `if`/`elif`/`else`, `for`, `while`, `with`, function calls, attributes, indexing, slicing, numeric literals, string literals, and Python-like layout tokens. Constructs unrelated to the current kernel target, such as class declarations, exception handling, lambda expressions, comprehensions, and asynchronous functions, are intentionally not modeled.
+The supported kernel subset includes decorators, function definitions, parameters, `tl.constexpr` annotations, assignments, augmented assignments, returns, assertions, `if`/`elif`/`else`, `for`, `while`, `with`, function calls, attributes, indexing, slicing, numeric literals, string literals, and Python-like layout tokens. Constructs unrelated to the target kernel subset, such as class declarations, exception handling, lambda expressions, comprehensions, and asynchronous functions, are intentionally not modeled.
+
+== IEEE 830 and assignment-deliverable alignment <ieee-830-alignment>
+
+The evaluation presentation requires the report to follow an IEEE 830-style development structure and to include the scanner deliverables listed in @tab-deliverables. The report therefore separates requirements and lexical definition in Analysis, construction details in Design and Implementation, and objective evidence in Verification and Validation.
+
+#figure(
+  table(
+    columns: (2fr, 2fr),
+    inset: 5pt,
+    align: left,
+    [*Required deliverable*], [*Where it is covered*],
+    [Informal description of required lexemes], [Section @lexical-inventory-and-omissions],
+    [Regular expression for each token kind], [@tab-regex-inventory],
+    [Automata that recognize required lexemes], [@fig-host-jit-automaton, @fig-identifier-dfa, and @fig-number-dfa],
+    [Token IDs], [@tab-token-ids],
+    [Transition table], [@tab-transition-table],
+    [Symbol table design], [@tab-data-model],
+    [Scanner implemented using UNIX `lex`], [Section @source-modules and @sec-lex-printout],
+    [Scanner output examples], [Section @execution-snapshots],
+  ),
+  kind: table,
+  caption: [Assignment deliverables from the evaluation presentation and report coverage.],
+) <tab-deliverables>
 
 = Analysis <analysis>
 
@@ -66,18 +146,24 @@ The supported kernel subset includes decorators, function definitions, parameter
 
 The formal input recognized by the parser is one or more top-level Triton JIT blocks:
 
+#mini-source([Accepted JIT block shape], [
 ```text
 @triton.jit
 def kernel_name(parameters):
     statements
 ```
+]) <fig-jit-block-shape>
 
 The scanner treats the surrounding file as transport context, not as part of the validated language. This is the reason the implementation can run against practical fixtures that include imports and test harness code while still keeping the compiler front end small, auditable, and focused on GPU kernels.
 
 == Delivered capability traceability <delivered-capability-traceability>
 
-#align(center)[
-  #table(
+#section-note[
+  Delivered capabilities are linked to their implementation artifacts and validation evidence to support auditability and verification.
+]
+
+#figure(
+  table(
     columns: (auto, 1.2fr, 1.45fr, 1.2fr),
     inset: 5pt,
     align: left,
@@ -89,19 +175,21 @@ The scanner treats the surrounding file as transport context, not as part of the
     [C5], [Lexical, syntax, semantic, and missing-kernel failures are visible to users.], [Lexical counters in `triton.l`; `yyerror` and semantic duplicate checks in `triton.y`; nonzero exit in parser `main`.], [Invalid fixtures: `bad_syntax.py`, `duplicate_kernel.py`, and `missing_jit.py`.],
     [C6], [The parser validates the supported kernel structure and expression subset.], [Bison grammar in `triton.y` for decorators, signatures, suites, statements, calls, attributes, indexing, slicing, and expression precedence.], [Valid fixtures and end-to-end generated kernels exercise common syntax families.],
     [C7], [Successful parsing produces a compact technical kernel report.], [`KernelInfo`, `ParameterInfo`, `add_parameter`, `add_local`, `add_tl_call`, and `print_report` in `triton.y`.], [Reports for `vector_add.py` and `layer_norm.py` list kernels, parameters, locals, and Triton calls.],
-  )
-]
+  ),
+  kind: table,
+  caption: [Delivered capability traceability matrix.],
+) <tab-traceability>
 
 == Lexical inventory and omissions <lexical-inventory-and-omissions>
 
-The scanner includes lexemes needed by Triton kernels rather than the whole Python language. Identifiers cover kernel names, variables, parameter names, and qualified names through the separate `DOT` token. Numeric literals cover decimal, binary, octal, hexadecimal, and common floating-point forms. String literals cover quoted, triple-quoted, raw, byte, Unicode, and formatted prefixes because real kernels may call APIs such as `float("inf")` or pass string-like arguments. Operators cover arithmetic, pointer-offset arithmetic, masks, comparisons, matrix multiplication, and augmented assignment. Delimiters cover function calls, indexing, slicing, dictionaries or brace-delimited forms, annotations, and statement separators. Layout tokens model Python block structure.
+The scanner includes lexemes needed by Triton kernels rather than the whole Python language. Identifiers cover kernel names, variables, parameter names, and qualified names through the separate `DOT` token. Numeric literals cover decimal, binary, hexadecimal, and common floating-point forms. Octal literals are intentionally omitted because they do not appear in the target Triton kernels and would add an unused token family. String literals cover quoted, triple-quoted, raw, byte, Unicode, and formatted prefixes because real kernels may call APIs such as `float("inf")` or pass string-like arguments. Operators cover arithmetic, pointer-offset arithmetic, masks, comparisons, matrix multiplication, and augmented assignment. Delimiters cover function calls, indexing, slicing, dictionaries or brace-delimited forms, annotations, and statement separators. Layout tokens model Python block structure.
 
-Broad Python-only constructs are not given keyword tokens unless they are useful to the accepted kernel subset. For example, `class`, `try`, `except`, `lambda`, `async`, `await`, and `raise` remain outside the modeled grammar. This keeps scanner and parser behavior aligned with the current GPU-kernel commission instead of overfitting a partial general Python grammar.
+Broad Python-only constructs are not given keyword tokens unless they are useful to the accepted kernel subset. For example, `class`, `try`, `except`, `lambda`, `async`, `await`, and `raise` remain outside the modeled grammar. This keeps scanner and parser behavior aligned with the targeted GPU-kernel subset instead of overfitting a partial general Python grammar.
 
 == Formal regular expressions <formal-regular-expressions>
 
-#align(center)[
-  #table(
+#figure(
+  table(
     columns: (1.1fr, 2.2fr, 1.55fr),
     inset: 5pt,
     align: left,
@@ -110,7 +198,6 @@ Broad Python-only constructs are not given keyword tokens unless they are useful
     [`NUMBER_INT`], [`[0-9]+`], [`0`, `128`],
     [`NUMBER_HEX`], [`0[xX][0-9a-fA-F]+`], [`0xFF`],
     [`NUMBER_BIN`], [`0[bB][01]+`], [`0b1010`],
-    [`NUMBER_OCT`], [`0[oO][0-7]+`], [`0o755`],
     [`NUMBER_FLOAT`], [`(([0-9]+\.[0-9]*|\.[0-9]+)([eE][+-]?[0-9]+)?|[0-9]+[eE][+-]?[0-9]+)`], [`0.0`, `.5`, `1.5e-3`],
     [`STRING`], [`[fFrRbBuU]*"""([^"\\]|\\.|"[^"\\]|""[^"\\])*"""`], [Triple double-quoted string],
     [`STRING`], [`[fFrRbBuU]*'''([^'\\]|\\.|'[^'\\]|''[^'\\])*'''`], [Triple single-quoted string],
@@ -123,34 +210,44 @@ Broad Python-only constructs are not given keyword tokens unless they are useful
     [Delimiters], [`(`, `)`, `[`, `]`, `{`, `}`, `:`, `,`, `.`, `;`], [Calls, indexing, suites, attributes],
     [JIT activator], [`@triton[ \t]*\.[ \t]*jit` in host mode], [Switches from host scanning to token emission],
     [Layout], [`\n[ \t]*` plus indentation comparison], [`NEWLINE`, `INDENT`, `DEDENT`],
-  )
-]
+  ),
+  kind: table,
+  caption: [Formal lexical inventory and Flex regular-expression families.],
+) <tab-regex-inventory>
 
 == Token ID catalogue <token-id-catalogue>
 
-The public token numbers are shared by standalone scanner mode and the Bison parser. The generated `triton.tab.h` currently assigns the following values:
+The public token numbers are shared by standalone scanner mode and the Bison parser. The generated `triton.tab.h` assigns the following values:
 
-```text
-258 NAME             259 STRING           260 NUMBER_INT       261 NUMBER_FLOAT
-262 NUMBER_HEX       263 NUMBER_BIN       264 NUMBER_OCT       265 DEF
-266 IF               267 ELIF             268 ELSE             269 FOR
-270 IN               271 WHILE            272 WITH             273 AS
-274 RETURN           275 ASSERT           276 PASS             277 AND
-278 OR               279 NOT              280 IS               281 TRUE
-282 FALSE            283 NONE             284 NEWLINE          285 INDENT
-286 DEDENT           287 DOUBLESTAREQ     288 DOUBLESLASHEQ    289 LSHIFTEQ
-290 RSHIFTEQ         291 PLUSEQ           292 MINUSEQ          293 STAREQ
-294 SLASHEQ          295 PERCENTEQ        296 AMPEQ            297 PIPEEQ
-298 CARETEQ          299 EQEQ             300 NOTEQ            301 LTEQ
-302 GTEQ             303 DOUBLESTAR       304 DOUBLESLASH      305 LSHIFT
-306 RSHIFT           307 ARROW            308 ELLIPSIS         309 PLUS
-310 MINUS            311 STAR             312 SLASH            313 PERCENT
-314 AMP              315 PIPE             316 CARET            317 TILDE
-318 AT               319 LT               320 GT               321 EQ
-322 LPAREN           323 RPAREN           324 LBRACKET         325 RBRACKET
-326 LBRACE           327 RBRACE           328 COLON            329 COMMA
-330 DOT              331 SEMI
-```
+#figure(
+  table(
+    columns: (auto, 1fr, auto, 1fr, auto, 1fr, auto, 1fr),
+    inset: 4pt,
+    align: left,
+    [*ID*], [*Token*], [*ID*], [*Token*], [*ID*], [*Token*], [*ID*], [*Token*],
+    [258], [`NAME`], [259], [`STRING`], [260], [`NUMBER_INT`], [261], [`NUMBER_FLOAT`],
+    [262], [`NUMBER_HEX`], [263], [`NUMBER_BIN`], [264], [`DEF`], [265], [`IF`],
+    [266], [`ELIF`], [267], [`ELSE`], [268], [`FOR`], [269], [`IN`],
+    [270], [`WHILE`], [271], [`WITH`], [272], [`AS`], [273], [`RETURN`],
+    [274], [`ASSERT`], [275], [`PASS`], [276], [`AND`], [277], [`OR`],
+    [278], [`NOT`], [279], [`IS`], [280], [`TRUE`], [281], [`FALSE`],
+    [282], [`NONE`], [283], [`NEWLINE`], [284], [`INDENT`], [285], [`DEDENT`],
+    [286], [`DOUBLESTAREQ`], [287], [`DOUBLESLASHEQ`], [288], [`LSHIFTEQ`], [289], [`RSHIFTEQ`],
+    [290], [`PLUSEQ`], [291], [`MINUSEQ`], [292], [`STAREQ`], [293], [`SLASHEQ`],
+    [294], [`PERCENTEQ`], [295], [`AMPEQ`], [296], [`PIPEEQ`], [297], [`CARETEQ`],
+    [298], [`EQEQ`], [299], [`NOTEQ`], [300], [`LTEQ`], [301], [`GTEQ`],
+    [302], [`DOUBLESTAR`], [303], [`DOUBLESLASH`], [304], [`LSHIFT`], [305], [`RSHIFT`],
+    [306], [`ARROW`], [307], [`ELLIPSIS`], [308], [`PLUS`], [309], [`MINUS`],
+    [310], [`STAR`], [311], [`SLASH`], [312], [`PERCENT`], [313], [`AMP`],
+    [314], [`PIPE`], [315], [`CARET`], [316], [`TILDE`], [317], [`AT`],
+    [318], [`LT`], [319], [`GT`], [320], [`EQ`], [321], [`LPAREN`],
+    [322], [`RPAREN`], [323], [`LBRACKET`], [324], [`RBRACKET`], [325], [`LBRACE`],
+    [326], [`RBRACE`], [327], [`COLON`], [328], [`COMMA`], [329], [`DOT`],
+    [330], [`SEMI`], [], [], [], [], [], [],
+  ),
+  kind: table,
+  caption: [Public token IDs emitted by the scanner and consumed by the parser.],
+) <tab-token-ids>
 
 `YYEOF`, `YYerror`, and `YYUNDEF` remain Bison-internal control tokens. Parser-only precedence symbols (`IFX`, `UPLUS`, `UMINUS`, and `UTILDE`) are not emitted by the scanner.
 
@@ -158,104 +255,108 @@ The public token numbers are shared by standalone scanner mode and the Bison par
 
 == Front-end architecture <front-end-architecture>
 
-```text
-                 source .py / stdin
-                         |
-                         v
-        +--------------------------------+
-        | Flex scanner: triton.l         |
-        | - HOST/JIT start conditions    |
-        | - token regexes                |
-        | - indentation token queue      |
-        | - standalone symbol table      |
-        +----------------+---------------+
-                         |
-             token stream| + semantic text
-                         v
-        +--------------------------------+
-        | Bison parser: triton.y         |
-        | - kernel grammar               |
-        | - expression precedence        |
-        | - semantic duplicate checks    |
-        | - kernel report aggregation    |
-        +----------------+---------------+
-                         |
-                         v
-          token listing or parser report
-```
+#figure(
+  diagram(
+    node-fill: soft-blue,
+    node-stroke: 0.8pt + tec-blue,
+    edge-stroke: 0.8pt + tec-blue,
+    node((0, 0), [`source.py` / stdin], width: 36mm, height: 9mm, corner-radius: 2pt),
+    edge("d", "-|>", [`read input`], label-side: left),
+    node((0, 1), align(center)[
+      *Flex scanner*\
+      `triton.l`\
+      HOST/JIT states, regexes, layout queue, scanner symbols
+    ], width: 68mm, height: 20mm, corner-radius: 3pt),
+    edge("d", "-|>", [`tokens + semantic text`], label-side: left),
+    node((0, 2), align(center)[
+      *Bison parser*\
+      `triton.y`\
+      kernel grammar, precedence, semantic checks, report aggregation
+    ], width: 68mm, height: 20mm, corner-radius: 3pt),
+    edge("d", "-|>", [`emit result`], label-side: left),
+    node((0, 3), [token listing or parser report], width: 46mm, height: 9mm, corner-radius: 2pt),
+  ),
+  caption: [Scanner/parser ownership boundary and data flow.],
+) <fig-front-end-architecture>
 
-The scanner owns character-level recognition and layout handling. The parser owns grammar validation and higher-level reporting. The executables are built from the same scanner source, with `WITH_PARSER` selecting whether tokens are printed immediately or returned to Bison.
+As shown in @fig-front-end-architecture, the scanner owns character-level recognition and layout handling. The parser owns grammar validation and higher-level reporting. The executables are built from the same scanner source, with `WITH_PARSER` selecting whether tokens are printed immediately or returned to Bison.
 
 == Scanner automata <scanner-automata>
 
 The scanner has a top-level deterministic mode automaton. `HOST` corresponds to Flex `INITIAL`; `JIT` is an exclusive Flex start condition.
 
-```text
-HOST
-  -- column 0 and @triton.jit --> JIT, re-read decorator as tokens
-  -- indented @triton.jit -----> HOST, emit lexical error
-  -- any other host text ------> HOST, skip
-  -- EOF ----------------------> accept end of input
+#figure(
+  automaton(
+    (
+      HOST: (JIT: [`@triton.jit` at column 0]),
+      JIT: (HOST: [top-level dedent]),
+    ),
+    initial: "HOST",
+    final: ("HOST",),
+  ),
+  caption: [Top-level scanner mode automaton for host skipping and JIT token emission.],
+) <fig-host-jit-automaton>
 
-JIT
-  -- token regex --------------> JIT, emit token
-  -- opening delimiter --------> JIT, paren_depth++ and emit token
-  -- closing delimiter --------> JIT, paren_depth-- and emit token
-  -- newline while depth > 0 --> JIT, skip implicit line join
-  -- newline at depth 0 -------> JIT, enqueue NEWLINE and layout tokens
-  -- dedent to column 0 -------> HOST after queued DEDENT/NEWLINE tokens
-  -- EOF ----------------------> flush final DEDENT tokens, accept
-```
+@fig-host-jit-automaton summarizes the `HOST`/`JIT` start-condition behavior. The detailed transition rules are listed in @tab-transition-table.
 
 Representative token DFAs are summarized below. Flex builds equivalent deterministic automata from the regular expressions in the previous section.
 
-```text
-Identifier and keyword DFA
+#figure(
+  automaton(
+    (
+      I0: (I1: [letter or `_`]),
+      I1: (I1: [letter, digit, or `_`]),
+    ),
+    initial: "I0",
+    final: ("I1",),
+  ),
+  caption: [Identifier and keyword-candidate DFA; accepted lexemes are relabeled as keywords by exact lookup.],
+) <fig-identifier-dfa>
 
-I0 -- letter/_ ------------> I1 accepting NAME candidate
-I1 -- letter/digit/_ ------> I1
-I1 -- other ---------------> accept; exact lexeme lookup may relabel as keyword
+#figure(
+  diagram(
+    node-stroke: 0.8pt + ink,
+    edge-stroke: 0.8pt + ink,
+    node((-0.9, 0), [Start], stroke: none),
+    edge((-0.9, 0), (0, 0), "-|>"),
+    node((0, 0), [$N_0$], radius: 6.5mm),
+    edge((0, 0), (1.15, 0), "-|>", [`0`]),
+    node((1.15, 0), [NZ], radius: 6.5mm, stroke: 1.4pt + ink),
+    edge((1.15, 0), (2.45, -0.72), "-|>", [`x/X`], label-pos: 0.42),
+    node((2.45, -0.72), [HX], radius: 6.5mm),
+    edge((2.45, -0.72), (3.65, -0.72), "-|>", [hex]),
+    node((3.65, -0.72), [$H_1$], name: <dfa-h1>, radius: 6.5mm, stroke: 1.4pt + ink),
+    edge(<dfa-h1>, "-|>", <dfa-h1>, [hex], bend: 125deg, loop-angle: 90deg),
+    edge((1.15, 0), (2.45, 0.72), "-|>", [`b/B`], label-pos: 0.42),
+    node((2.45, 0.72), [BX], radius: 6.5mm),
+    edge((2.45, 0.72), (3.65, 0.72), "-|>", [`0/1`]),
+    node((3.65, 0.72), [$B_1$], name: <dfa-b1>, radius: 6.5mm, stroke: 1.4pt + ink),
+    edge(<dfa-b1>, "-|>", <dfa-b1>, [`0/1`], bend: 125deg, loop-angle: 90deg),
+  ),
+  caption: [Base-prefixed numeric DFA for hexadecimal and binary integer literals.],
+) <fig-number-dfa>
 
-Base-prefixed numeric DFA
-
-N0 -- 0 -------------------> NZ accepting NUMBER_INT
-NZ -- x/X -----------------> HX
-HX -- hex digit -----------> H1 accepting NUMBER_HEX
-H1 -- hex digit -----------> H1
-NZ -- b/B -----------------> BX
-BX -- 0/1 -----------------> B1 accepting NUMBER_BIN
-B1 -- 0/1 -----------------> B1
-NZ -- o/O -----------------> OX
-OX -- 0..7 ----------------> O1 accepting NUMBER_OCT
-O1 -- 0..7 ----------------> O1
-
-Decimal and float DFA
-
-N0 -- digit ---------------> D1 accepting NUMBER_INT
-D1 -- digit ---------------> D1
-D1 -- '.' -----------------> F1 accepting NUMBER_FLOAT
-N0 -- '.' -----------------> FD
-FD -- digit ---------------> F1 accepting NUMBER_FLOAT
-D1/F1 -- e/E --------------> ES
-ES -- + / - ---------------> ED
-ES/ED -- digit ------------> E1 accepting NUMBER_FLOAT
-E1 -- digit ---------------> E1
-
-Operator trie DFA examples
-
-'*'  accepts STAR; next '*' accepts DOUBLESTAR; next '=' accepts DOUBLESTAREQ
-'/'  accepts SLASH; next '/' accepts DOUBLESLASH; next '=' accepts DOUBLESLASHEQ
-'<'  accepts LT;    next '<' accepts LSHIFT;     next '=' accepts LSHIFTEQ or LTEQ
-'-'  accepts MINUS; next '>' accepts ARROW;       next '=' accepts MINUSEQ
-'.'  accepts DOT;   next '..' accepts ELLIPSIS
-```
+#figure(
+  table(
+    columns: (1.2fr, 2.4fr, 1.7fr),
+    inset: 5pt,
+    align: left,
+    [*Automaton family*], [*Key transitions*], [*Acceptance rule*],
+    [Identifier/keyword], [`I0 -- letter/_ --> I1`; `I1 -- letter/digit/_ --> I1`], [`I1` accepts a `NAME` candidate; exact lexeme lookup may relabel it as a keyword.],
+    [Base-prefixed integers], [`N0 -- 0 --> NZ`; `NZ -- x/X --> HX -- hex --> H1`; `NZ -- b/B --> BX -- 0/1 --> B1`], [`NZ` accepts `0`; `H1` accepts `NUMBER_HEX`; `B1` accepts `NUMBER_BIN`.],
+    [Decimal and float], [`N0 -- digit --> D1`; `D1 -- . --> F1`; `D1/F1 -- e/E --> ES`; `ES -- +/- --> ED`; `ES/ED -- digit --> E1`], [`D1` accepts `NUMBER_INT`; `F1` and `E1` accept `NUMBER_FLOAT`.],
+    [Operator trie], [`*`, `/`, `<`, `-`, and `.` branch to the longest valid compound token before accepting.], [Longest-match selection returns tokens such as `DOUBLESTAR`, `DOUBLESTAREQ`, `DOUBLESLASH`, `LSHIFT`, `LTEQ`, `ARROW`, or `ELLIPSIS`.],
+  ),
+  kind: table,
+  caption: [Textual summary of token-recognition automata not fully expanded as separate figures.],
+) <tab-dfa-summary>
 
 String recognition is handled by four regular-expression DFAs: single-quoted, double-quoted, triple-single-quoted, and triple-double-quoted. Each allows an optional prefix in `[fFrRbBuU]*`, consumes escaped characters as `\\.`, rejects unescaped physical newlines in single-line strings, and accepts only at the matching closing delimiter.
 
 == Finite transition table <finite-transition-table>
 
-#align(center)[
-  #table(
+#figure(
+  table(
     columns: (auto, 1.45fr, 1.35fr, 1.75fr),
     inset: 5pt,
     align: left,
@@ -265,7 +366,7 @@ String recognition is handled by four regular-expression DFAs: single-quoted, do
     [`HOST`], [Other non-newline text], [`HOST`], [Advance host column and skip.],
     [`HOST`], [Newline], [`HOST`], [Reset host column to zero.],
     [`JIT`], [Identifier regex], [`JIT`], [Emit keyword token when lexeme matches keyword set; otherwise emit `NAME`.],
-    [`JIT`], [Number regex], [`JIT`], [Emit one of `NUMBER_INT`, `NUMBER_FLOAT`, `NUMBER_HEX`, `NUMBER_BIN`, or `NUMBER_OCT`.],
+    [`JIT`], [Number regex], [`JIT`], [Emit one of `NUMBER_INT`, `NUMBER_FLOAT`, `NUMBER_HEX`, or `NUMBER_BIN`.],
     [`JIT`], [String regex], [`JIT`], [Emit `STRING`.],
     [`JIT`], [Operator or delimiter trie], [`JIT`], [Emit longest matching token.],
     [`JIT`], [`(`, `[`, `{`], [`JIT`], [Increment `paren_depth`; emit delimiter token.],
@@ -277,62 +378,59 @@ String recognition is handled by four regular-expression DFAs: single-quoted, do
     [`JIT`], [Newline with smaller indentation], [`JIT` or `HOST`], [Pop indentation stack; queue one or more `DEDENT`; return to `HOST` after top-level dedent.],
     [`JIT`], [Unsupported character], [`JIT`], [Emit lexical error and continue scanning.],
     [`JIT`], [EOF], [accept], [Flush pending `NEWLINE` and `DEDENT` tokens before ending.],
-  )
-]
+  ),
+  kind: table,
+  caption: [Finite transition table for scanner start conditions, layout handling, and EOF cleanup.],
+) <tab-transition-table>
 
 == Parser grammar model <parser-grammar-model>
 
 The Bison grammar validates a sequence of JIT blocks. Each block consists of a decorator, a `def` signature, an optional return annotation, and an indented suite. The statement layer supports simple statements separated by semicolons and compound statements with nested suites. The expression layer models Triton-style arithmetic and masks with Bison precedence declarations.
 
-```text
-program     -> jit_blocks
-jit_block   -> decorator DEF NAME '(' parameters ')' return_annotation ':' suite
-suite       -> NEWLINE+ INDENT block DEDENT
-block       -> block_item+
-block_item  -> NEWLINE | simple_stmt NEWLINE | compound_stmt
-simple_stmt -> expr | assignment | annotated_assignment | return | assert | pass
-compound    -> if | for | while | with
-primary     -> atom | primary '.' NAME | primary '(' arguments ')' | primary '[' slices ']'
-```
+#figure(
+  table(
+    columns: (1.15fr, 2.85fr),
+    inset: 5pt,
+    align: left,
+    [*Nonterminal*], [*Production summary*],
+    [`program`], [`jit_blocks`],
+    [`jit_block`], [`decorator DEF NAME "(" parameters ")" return_annotation ":" suite`],
+    [`suite`], [`NEWLINE+ INDENT block DEDENT`],
+    [`block`], [`block_item+`],
+    [`block_item`], [`NEWLINE | simple_stmt NEWLINE | compound_stmt`],
+    [`simple_stmt`], [`expr | assignment | annotated_assignment | return | assert | pass`],
+    [`compound`], [`if | for | while | with`],
+    [`primary`], [`atom | primary "." NAME | primary "(" arguments ")" | primary "[" slices "]"`],
+  ),
+  kind: table,
+  caption: [Parser grammar summary for the supported Triton JIT subset.],
+) <tab-parser-grammar>
 
 Parser actions keep the report lightweight. When a kernel name is accepted, `begin_kernel` creates a `KernelInfo` record. Parameter actions record names and `tl.constexpr` flags. Assignment actions record local identifiers. Call actions record only qualified `tl.*` calls, so the final report emphasizes Triton APIs rather than every helper function.
 
 == Processing pseudocode <processing-pseudocode>
 
-```text
-scan(input):
-  state = HOST
-  for each matched lexeme:
-    if state == HOST:
-      skip ordinary host text
-      if top_level_jit_decorator:
-        reset indentation and parenthesis state
-        state = JIT
-        reprocess decorator as normal JIT tokens
-    else:
-      if lexeme is newline and paren_depth == 0:
-        compare indentation against indent_stack
-        queue NEWLINE / INDENT / DEDENT tokens
-      else if lexeme matches a token expression:
-        emit token and optional semantic text
-      else:
-        report lexical error
-
-parse(tokens):
-  for each accepted jit_block:
-    create kernel record
-    record parameters and constexpr flags
-    record assigned local identifiers
-    record tl.* calls seen in primary-call productions
-  after parse:
-    print report
-    exit nonzero if any error counter is nonzero or no kernels were found
-```
+#figure(
+  table(
+    columns: (auto, 1.25fr, 2.7fr),
+    inset: 5pt,
+    align: left,
+    [*Step*], [*Component*], [*Algorithmic action*],
+    [1], [Scanner], [Start in `HOST`; skip ordinary host text until a top-level `@triton.jit` decorator is found.],
+    [2], [Scanner], [On a top-level JIT decorator, reset indentation and parenthesis state, enter `JIT`, and reprocess the decorator as normal tokens.],
+    [3], [Scanner], [In `JIT`, emit tokens for regex matches; for physical newlines at parenthesis depth zero, compare indentation and queue `NEWLINE`, `INDENT`, or `DEDENT`.],
+    [4], [Scanner], [Report lexical errors for unsupported characters and flush final layout tokens at EOF.],
+    [5], [Parser], [For each accepted JIT block, create a kernel record and record parameters, `tl.constexpr` flags, assigned locals, and qualified `tl.*` calls.],
+    [6], [Parser], [Print the final report and exit nonzero when lexical, syntax, semantic, or missing-kernel errors are present.],
+  ),
+  kind: table,
+  caption: [Algorithmic description of scanner and parser processing.],
+) <tab-processing-algorithm>
 
 == Symbol and report data model <symbol-and-report-data-model>
 
-#align(center)[
-  #table(
+#figure(
+  table(
     columns: (1fr, 1.25fr, 2fr),
     inset: 5pt,
     align: left,
@@ -341,8 +439,10 @@ parse(tokens):
     [`PendingToken`], [`triton.l`], [Buffers synthetic `NEWLINE`, `INDENT`, and `DEDENT` tokens so layout can be returned one token at a time.],
     [`ParameterInfo`], [`triton.y`], [Stores a kernel parameter name and whether its annotation was exactly `tl.constexpr`.],
     [`KernelInfo`], [`triton.y`], [Stores kernel name, line, parameters, locals, and called Triton APIs.],
-  )
-]
+  ),
+  kind: table,
+  caption: [Runtime data structures used by scanner symbol-table output and parser reports.],
+) <tab-data-model>
 
 = Implementation Status <implementation-status>
 
@@ -354,7 +454,19 @@ The parser implementation is in `compiler/triton.y`. Its definition section decl
 
 The build automation is in `compiler/Makefile`. The `scanner` target builds `triton_scanner`; the `compiler` target runs Bison and Flex and links `triton_compiler`; `clean` removes generated C files, headers, binaries, and parser output.
 
-== Current behavior <current-behavior>
+== Lex source printout <sec-lex-printout>
+
+The evaluation presentation requires a complete scanner source printout. The listing below is kept as source code because it is implementation evidence, not explanatory prose.
+
+#figure(
+  block(width: 100%, inset: 6pt, radius: 3pt, fill: rgb("#f6f8fb"), stroke: 0.45pt + rule)[
+    #text(size: 6.2pt)[#raw(read("../triton.l"), lang: "c")]
+  ],
+  kind: raw,
+  caption: [Complete Flex scanner source file (`compiler/triton.l`).],
+) <fig-lex-source>
+
+== Runtime behavior <runtime-behavior>
 
 The scanner emits tokens only for JIT islands. This behavior is visible in the vector-add fixture: the file header and imports are skipped, and the first emitted token is the decorator's `AT` token. Layout is represented with synthetic `NEWLINE`, `INDENT`, and `DEDENT` tokens, including final dedents at end-of-file.
 
@@ -456,43 +568,32 @@ exit=1
 
 == Validation command <validation-command>
 
-The current validation sequence is:
+Validation was performed with the following command sequence:
 
-```bash
-make -C compiler compiler scanner
-uv run pytest tests/compiler -q
-make -C compiler clean
-```
-
-The compiler test suite currently passes with 40 tests. The command rebuilds generated Flex/Bison artifacts before test execution and removes generated binaries afterwards.
-
-= Work Plan <work-plan>
-
-#align(center)[
-  #table(
-    columns: (1.25fr, 1fr, 2fr),
+#figure(
+  table(
+    columns: (auto, 2.8fr),
     inset: 5pt,
     align: left,
-    [*Stage*], [*Status*], [*Result or next action*],
-    [Language analysis], [Complete], [Reduced the target to top-level Triton JIT kernels embedded in Python files; excluded unrelated Python host constructs.],
-    [Lexical design], [Complete], [Defined token inventory, regular expressions, mode automaton, layout handling, token IDs, and scanner symbol table.],
-    [Scanner implementation], [Complete], [Implemented Flex `HOST`/`JIT` states, token emission, indentation queue, lexical diagnostics, and standalone scanner mode.],
-    [Parser design], [Complete], [Defined Bison grammar for kernel declarations, suites, statements, expressions, calls, attributes, and slices.],
-    [Parser implementation], [Complete], [Implemented report structures, duplicate-kernel checks, `tl.constexpr` detection, local collection, and `tl.*` call collection.],
-    [Fixture validation], [Complete], [Validated accepted and rejected examples through the automated compiler test suite.],
-    [Report packaging], [In progress], [Consolidate formal analysis, automata, transition tables, snapshots, and references into the client-facing technical report.],
-    [Final handoff], [Pending], [Regenerate the report artifact, rerun validation from a clean compiler directory, and deliver source plus generated report.],
-  )
-]
+    [*Step*], [*Command*],
+    [1], [`make -C compiler compiler scanner`],
+    [2], [`uv run pytest tests/compiler -q`],
+    [3], [`make -C compiler clean`],
+  ),
+  kind: table,
+  caption: [Reproducible validation command sequence.],
+) <tab-validation-command>
+
+The compiler test suite passes with 41 tests. The command rebuilds generated Flex/Bison artifacts before test execution and removes generated binaries afterwards.
 
 = References <references>
 
-Free Software Foundation. _Bison: The Yacc-compatible Parser Generator_. GNU Project. Accessed June 10, 2026. https://www.gnu.org/software/bison/manual/.
+[1] Free Software Foundation, _Bison: The Yacc-compatible Parser Generator_. GNU Project. Accessed June 10, 2026. Available: https://www.gnu.org/software/bison/manual/.
 
-Free Software Foundation. _Flex: The Fast Lexical Analyzer_. GNU Project. Accessed June 10, 2026. https://westes.github.io/flex/manual/.
+[2] Free Software Foundation, _Flex: The Fast Lexical Analyzer_. GNU Project. Accessed June 10, 2026. Available: https://westes.github.io/flex/manual/.
 
-IEEE Computer Society. _IEEE Recommended Practice for Software Requirements Specifications_. IEEE Std 830-1998. New York: Institute of Electrical and Electronics Engineers, 1998.
+[3] Python Software Foundation, _The Python Language Reference_. Accessed June 10, 2026. Available: https://docs.python.org/3/reference/.
 
-Python Software Foundation. _The Python Language Reference_. Accessed June 10, 2026. https://docs.python.org/3/reference/.
+[4] Triton Contributors, _Triton Documentation: Language and Programming Guide_. Accessed June 10, 2026. Available: https://triton-lang.org/main/.
 
-Triton Contributors. _Triton Documentation: Language and Programming Guide_. Accessed June 10, 2026. https://triton-lang.org/main/.
+[5] IEEE Computer Society, _IEEE Recommended Practice for Software Requirements Specifications_, IEEE Std. 830-1998. New York, NY, USA: IEEE, 1998.

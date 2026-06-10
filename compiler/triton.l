@@ -18,7 +18,7 @@
   #include "triton.tab.h"
 #else
   enum standalone_tokens {
-    NAME = 258, STRING, NUMBER_INT, NUMBER_FLOAT, NUMBER_HEX, NUMBER_BIN, NUMBER_OCT,
+    NAME = 258, STRING, NUMBER_INT, NUMBER_FLOAT, NUMBER_HEX, NUMBER_BIN,
     DEF, IF, ELIF, ELSE, FOR, IN, WHILE, WITH, AS, RETURN, ASSERT, PASS,
     AND, OR, NOT, IS, TRUE, FALSE, NONE,
     NEWLINE, INDENT, DEDENT,
@@ -93,7 +93,6 @@ static const char *token_name(int token)
         case NUMBER_FLOAT: return "NUMBER_FLOAT";
         case NUMBER_HEX: return "NUMBER_HEX";
         case NUMBER_BIN: return "NUMBER_BIN";
-        case NUMBER_OCT: return "NUMBER_OCT";
         case DEF: return "DEF";
         case IF: return "IF";
         case ELIF: return "ELIF";
@@ -199,7 +198,7 @@ static int queue_pop(void)
 #ifdef WITH_PARSER
     if (item.token == NAME || item.token == STRING ||
         item.token == NUMBER_INT || item.token == NUMBER_FLOAT || item.token == NUMBER_HEX ||
-        item.token == NUMBER_BIN || item.token == NUMBER_OCT) {
+        item.token == NUMBER_BIN) {
         yylval.text = copy_text(item.lexeme);
     }
 #else
@@ -228,7 +227,7 @@ static int emit_token(int token, const char *lexeme)
 #ifdef WITH_PARSER
     if (token == NAME || token == STRING ||
         token == NUMBER_INT || token == NUMBER_FLOAT || token == NUMBER_HEX ||
-        token == NUMBER_BIN || token == NUMBER_OCT) {
+        token == NUMBER_BIN) {
         yylval.text = copy_text(lexeme);
     }
 #else
@@ -281,7 +280,6 @@ LETTER     [A-Za-z_]
 NAME_RE    {LETTER}({LETTER}|{DIGIT})*
 HEX        0[xX][0-9a-fA-F]+
 BIN        0[bB][01]+
-OCT        0[oO][0-7]+
 INT        {DIGIT}+
 EXP        [eE][+-]?{DIGIT}+
 FLOAT      (({DIGIT}+\.{DIGIT}*|\.{DIGIT}+){EXP}?|{DIGIT}+{EXP})
@@ -327,7 +325,6 @@ SPACE      [ \t]+
 <JIT>{FLOAT}                              { return emit_token(NUMBER_FLOAT, yytext); }
 <JIT>{HEX}                                { return emit_token(NUMBER_HEX, yytext); }
 <JIT>{BIN}                                { return emit_token(NUMBER_BIN, yytext); }
-<JIT>{OCT}                                { return emit_token(NUMBER_OCT, yytext); }
 <JIT>{INT}                                { return emit_token(NUMBER_INT, yytext); }
 
 <JIT>{NAME_RE} {
