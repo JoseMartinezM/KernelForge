@@ -1,23 +1,42 @@
 LEX := flex
+YACC := bison
 CC ?= cc
-CFLAGS ?= -O2
+CFLAGS ?= -Wall -Wextra -g
 
 LEX_FILE := triton.l
+YACC_FILE := triton.y
 LEX_C := lex.yy.c
-TARGET := triton_lexer
+YACC_C := triton.tab.c
+YACC_H := triton.tab.h
+SCANNER := triton_scanner
+COMPILER := triton_compiler
 
-.PHONY: all run clean
+.PHONY: all scanner compiler run test clean
 
-all: $(TARGET)
+all: compiler
 
-$(TARGET): $(LEX_C)
+scanner: $(SCANNER)
+
+compiler: $(COMPILER)
+
+$(SCANNER): $(LEX_C)
 	$(CC) $(CFLAGS) -o $@ $<
 
-$(LEX_C): $(LEX_FILE)
-	$(LEX) $<
+$(COMPILER): $(YACC_C) $(YACC_H) $(LEX_C)
+	$(CC) $(CFLAGS) -DWITH_PARSER -o $@ $(YACC_C) $(LEX_C)
 
-run: $(TARGET)
-	printf 'kernel add(x: 42) { return x + 1; }\n' | ./$(TARGET)
+$(LEX_C): $(LEX_FILE)
+	$(LEX) $(LEX_FILE)
+
+$(YACC_C) $(YACC_H): $(YACC_FILE)
+	$(YACC) -d $(YACC_FILE)
+
+run: $(COMPILER)
+	./$(COMPILER) ../tests/compiler/fixtures/valid/vector_add.py
+
+test: $(COMPILER) $(SCANNER)
+	./$(COMPILER) ../tests/compiler/fixtures/valid/vector_add.py
+	./$(SCANNER) ../tests/compiler/fixtures/valid/vector_add.py >/dev/null
 
 clean:
-	rm -f $(TARGET) $(LEX_C)
+	rm -f $(SCANNER) $(COMPILER) $(LEX_C) $(YACC_C) $(YACC_H) parser.output
