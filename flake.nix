@@ -31,6 +31,9 @@
           basePackages = pkgs: [
             pkgs.uv
             pkgs.nodejs-slim_22
+            pkgs.flex
+            pkgs.bison
+            pkgs.typst
           ];
         in
         {
