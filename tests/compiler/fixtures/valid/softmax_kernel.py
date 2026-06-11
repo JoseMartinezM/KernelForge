@@ -1,6 +1,6 @@
 """
-Fixture VÁLIDO — Softmax kernel con control de flujo anidado.
-Prueba: if, for, while, operadores, constexpr, anotaciones de tipo.
+VALID fixture - Softmax kernel with nested control flow.
+Checks: if, for, while, operators, constexpr, and type annotations.
 """
 
 import triton

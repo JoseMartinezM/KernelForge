@@ -1,8 +1,8 @@
 """
-Fixture VÁLIDO — Layer Normalization kernel.
-Prueba: múltiples funciones en un archivo (helper + kernel),
-        función sin @triton.jit (helper), assert, return con valor,
-        operadores de comparación encadenados.
+VALID fixture - Layer Normalization kernel.
+Checks: multiple functions in one file (helper + kernel), a helper function
+        without @triton.jit, assert, return with a value, and chained
+        comparison operators.
 """
 
 import triton
@@ -26,23 +26,23 @@ def layer_norm_kernel(
     eps,
     BLOCK_SIZE: tl.constexpr,
 ):
-    # índice de fila
+    # Row index.
     row = tl.program_id(axis=0)
     X_ptr = X + row * stride
     Y_ptr = Y + row * stride
 
-    # calcular media
+    # Compute mean.
     cols = tl.arange(0, BLOCK_SIZE)
     mask = cols < N
     x = tl.load(X_ptr + cols, mask=mask, other=0.0)
     mean = tl.sum(x, axis=0) / N
 
-    # calcular varianza
+    # Compute variance.
     xmean = tl.where(mask, x - mean, 0.0)
     var = tl.sum(xmean * xmean, axis=0) / N
     rstd = 1.0 / tl.sqrt(var + eps)
 
-    # normalizar y escalar
+    # Normalize and scale.
     tl.store(Mean + row, mean)
     tl.store(Rstd + row, rstd)
 
@@ -69,7 +69,7 @@ def layer_norm_bwd_dx_fused(
     GROUP_SIZE_M: tl.constexpr,
     BLOCK_SIZE_N: tl.constexpr,
 ):
-    # kernel de backward pass
+    # Backward-pass kernel.
     row = tl.program_id(axis=0)
     cols = tl.arange(0, BLOCK_SIZE_N)
     mask = cols < N

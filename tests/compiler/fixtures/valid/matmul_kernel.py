@@ -1,7 +1,8 @@
 """
-Fixture VÁLIDO — Matmul kernel.
-Prueba: for loop, aug-assign con tl.dot, tl.arange embebido en aritmética,
-        comentarios dentro del cuerpo, múltiples tl.constexpr.
+VALID fixture - Matmul kernel.
+Checks: for loop, augmented assignment with tl.dot, tl.arange embedded in
+        arithmetic, comments inside the body, and multiple tl.constexpr
+        parameters.
 """
 
 import triton
@@ -19,11 +20,11 @@ def matmul_kernel(
     BLOCK_N: tl.constexpr,
     BLOCK_K: tl.constexpr,
 ):
-    # índices del bloque de salida
+    # Output block indices.
     pid_m = tl.program_id(axis=0)
     pid_n = tl.program_id(axis=1)
 
-    # tl.arange embebido en aritmética (bug #2 corregido)
+    # tl.arange embedded in arithmetic (bug #2 fixed).
     offs_am = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)
     offs_bn = pid_n * BLOCK_N + tl.arange(0, BLOCK_N)
     offs_k = tl.arange(0, BLOCK_K)
@@ -34,7 +35,7 @@ def matmul_kernel(
     acc = tl.zeros((BLOCK_M, BLOCK_N), dtype=tl.float32)
 
     for k in range(0, K, BLOCK_K):
-        # cargar tiles y acumular (aug-assign con tl.dot — bug #3 corregido)
+        # Load tiles and accumulate (aug-assign with tl.dot; bug #3 fixed).
         a = tl.load(a_ptrs)
         b = tl.load(b_ptrs)
         acc += tl.dot(a, b)

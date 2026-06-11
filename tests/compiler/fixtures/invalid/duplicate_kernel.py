@@ -1,6 +1,6 @@
 """
-Fixture INVÁLIDO — dos kernels con el mismo nombre.
-El translator debe reportar error semántico: función duplicada.
+INVALID fixture - two kernels with the same name.
+The translator should report a semantic error for the duplicate function.
 """
 
 import triton
