@@ -2,7 +2,7 @@
   title: "Report Title",
   subtitle: none,
   university: "Tecnológico de Monterrey",
-  school-name: "Escuela de Ingeniería y Ciencias",
+  school-name: "School of Engineering and Sciences",
   authors: (),
   date: datetime(year: 2026, month: 6, day: 10),
   school-color: rgb("#162773"),

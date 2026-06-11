@@ -1,10 +1,10 @@
 """
-Tests para el compilador C (triton_compiler.exe / triton_compiler).
+Tests for the C compiler binary (triton_compiler.exe / triton_compiler).
 
-Corre el binario compilado con bison+flex contra los fixtures de .py
-y verifica exit codes, stdout y stderr.
+Run the Bison+Flex binary against .py fixtures and verify exit codes,
+stdout, and stderr.
 
-Prerequisito: compilar primero desde compiler/:
+Prerequisite: build from compiler/ first:
     cd compiler && make compiler
 """
 
@@ -17,7 +17,7 @@ from pathlib import Path
 import pytest
 
 # ---------------------------------------------------------------------------
-# Rutas
+# Paths
 # ---------------------------------------------------------------------------
 
 COMPILER_DIR     = Path(__file__).parents[2] / "compiler"
@@ -25,16 +25,16 @@ FIXTURES_DIR     = Path(__file__).parent / "fixtures"
 FIXTURES_VALID   = FIXTURES_DIR / "valid"
 FIXTURES_INVALID = FIXTURES_DIR / "invalid"
 
-# Nombre del binario (Windows usa .exe, Linux/Mac sin extensión)
+# Binary name (Windows uses .exe, Linux/Mac do not)
 _BINARY_STEM = "triton_compiler"
 _BINARY = COMPILER_DIR / (_BINARY_STEM + (".exe" if sys.platform == "win32" else ""))
 
 # ---------------------------------------------------------------------------
-# Utilidades
+# Utilities
 # ---------------------------------------------------------------------------
 
 def _run(fixture: Path, timeout: int = 10) -> subprocess.CompletedProcess:
-    """Ejecuta triton_compiler sobre un fixture y retorna el resultado."""
+    """Run triton_compiler on a fixture and return the result."""
     return subprocess.run(
         [str(_BINARY), str(fixture)],
         capture_output=True,
@@ -48,13 +48,13 @@ def _run(fixture: Path, timeout: int = 10) -> subprocess.CompletedProcess:
 def _skip_if_no_binary():
     if not _BINARY.exists():
         pytest.skip(
-            f"Binario '{_BINARY.name}' no encontrado en {COMPILER_DIR}. "
-            "Compila con: cd compiler && make compiler"
+            f"Binary '{_BINARY.name}' not found in {COMPILER_DIR}. "
+            "Build it with: cd compiler && make compiler"
         )
 
 
 # ---------------------------------------------------------------------------
-# Fixtures válidos — exit 0, no "error" en stderr
+# Valid fixtures: exit 0 and no "error" in stderr
 # ---------------------------------------------------------------------------
 
 class TestValidFixtures:
@@ -77,16 +77,16 @@ class TestValidFixtures:
         result = _run(fixture)
         combined = result.stdout.lower() + result.stderr.lower()
         assert "syntax error" not in combined, (
-            f"{fixture.name} reportó 'syntax error':\n{result.stderr}"
+            f"{fixture.name} reported 'syntax error':\n{result.stderr}"
         )
 
     def test_vector_add_symbol_table(self):
         result = _run(FIXTURES_VALID / "vector_add.py")
         assert result.returncode == 0
         out = result.stdout
-        assert "add_kernel" in out, "No encontró nombre del kernel en la salida"
+        assert "add_kernel" in out, "Kernel name was not found in the output"
         assert "triton.jit" in out.lower() or "jit" in out.lower(), (
-            "No reportó @triton.jit"
+            "Did not report @triton.jit"
         )
 
     def test_softmax_detects_tl_calls(self):
@@ -94,45 +94,45 @@ class TestValidFixtures:
         assert result.returncode == 0
         out = result.stdout
         assert any(api in out for api in ["tl.", "program_id", "load", "store"]), (
-            "softmax_kernel no reportó ninguna API de Triton"
+            "softmax_kernel did not report any Triton API"
         )
 
     def test_matmul_detects_dot(self):
         result = _run(FIXTURES_VALID / "matmul_kernel.py")
         assert result.returncode == 0
-        # tl.dot debe aparecer en la tabla de llamadas Triton
+        # tl.dot must appear in the Triton call table.
         assert "dot" in result.stdout, (
-            "matmul_kernel no detectó tl.dot en la tabla de símbolos"
+            "matmul_kernel did not detect tl.dot in the symbol table"
         )
 
     def test_dropout_no_jit_warning(self):
-        """dropout_kernel tiene @triton.jit — no debe haber advertencia de JIT ausente."""
+        """dropout_kernel has @triton.jit, so no missing-JIT warning is expected."""
         result = _run(FIXTURES_VALID / "dropout_kernel.py")
         assert result.returncode == 0
         combined = result.stdout + result.stderr
-        assert "sin decorador" not in combined and "without" not in combined.lower(), (
-            "dropout_kernel reportó advertencia de JIT ausente siendo que sí tiene @triton.jit"
+        assert "without @triton.jit" not in combined.lower(), (
+            "dropout_kernel reported a missing-JIT warning even though it has @triton.jit"
         )
 
     def test_flash_attention_constexpr_params(self):
         result = _run(FIXTURES_VALID / "flash_attention.py")
         assert result.returncode == 0
         out = result.stdout
-        # Debe reportar parámetros constexpr
+        # Must report constexpr parameters.
         assert "constexpr" in out.lower() or "BLOCK_M" in out, (
-            "flash_attention no reportó parámetros tl.constexpr"
+            "flash_attention did not report tl.constexpr parameters"
         )
 
     def test_layer_norm_two_kernels(self):
         result = _run(FIXTURES_VALID / "layer_norm.py")
         assert result.returncode == 0
         out = result.stdout
-        assert "layer_norm_kernel" in out, "No encontró layer_norm_kernel"
-        assert "layer_norm_bwd_dx_fused" in out, "No encontró layer_norm_bwd_dx_fused"
+        assert "layer_norm_kernel" in out, "layer_norm_kernel was not found"
+        assert "layer_norm_bwd_dx_fused" in out, "layer_norm_bwd_dx_fused was not found"
 
 
 # ---------------------------------------------------------------------------
-# Fixtures inválidos — deben producir error o advertencia
+# Invalid fixtures must produce errors or warnings
 # ---------------------------------------------------------------------------
 
 class TestInvalidFixtures:
@@ -144,48 +144,47 @@ class TestInvalidFixtures:
     def test_bad_syntax_nonzero_exit(self):
         result = _run(FIXTURES_INVALID / "bad_syntax.py")
         assert result.returncode != 0, (
-            "bad_syntax.py debería fallar (exit != 0) pero salió con 0"
+            "bad_syntax.py should fail (exit != 0), but it exited with 0"
         )
 
     def test_bad_syntax_reports_error(self):
         result = _run(FIXTURES_INVALID / "bad_syntax.py")
         combined = result.stdout.lower() + result.stderr.lower()
         assert "error" in combined or "syntax" in combined, (
-            "bad_syntax.py no reportó ningún error"
+            "bad_syntax.py did not report any error"
         )
 
     def test_duplicate_kernel_detected(self):
         result = _run(FIXTURES_INVALID / "duplicate_kernel.py")
         combined = result.stdout + result.stderr
         assert "add_kernel" in combined, (
-            "duplicate_kernel.py: no mencionó el nombre duplicado 'add_kernel'"
+            "duplicate_kernel.py did not mention the duplicate name 'add_kernel'"
         )
         has_error = (
             result.returncode != 0
             or "error" in combined.lower()
-            or "duplicad" in combined.lower()
-            or "ya declarad" in combined.lower()
+            or "duplicate" in combined.lower()
+            or "already declared" in combined.lower()
         )
         assert has_error, (
-            "duplicate_kernel.py no reportó la redefinición del kernel"
+            "duplicate_kernel.py did not report the kernel redefinition"
         )
 
     def test_missing_jit_warns(self):
         result = _run(FIXTURES_INVALID / "missing_jit.py")
         combined = result.stdout + result.stderr
         has_warning = (
-            "advertencia" in combined.lower()
-            or "warning" in combined.lower()
-            or "sin decorador" in combined.lower()
+            "warning" in combined.lower()
+            or "without @triton.jit" in combined.lower()
             or "triton.jit" in combined.lower()
         )
         assert has_warning, (
-            "missing_jit.py no generó advertencia sobre @triton.jit ausente"
+            "missing_jit.py did not generate a warning about missing @triton.jit"
         )
 
 
 # ---------------------------------------------------------------------------
-# Tests de correctitud del scanner (tokens concretos)
+# Scanner correctness tests (concrete tokens)
 # ---------------------------------------------------------------------------
 
 SCANNER_BINARY = COMPILER_DIR / ("triton_scanner" + (".exe" if sys.platform == "win32" else ""))
@@ -208,44 +207,44 @@ class TestScanner:
     def require_scanner(self):
         if not SCANNER_BINARY.exists():
             pytest.skip(
-                f"Scanner '{SCANNER_BINARY.name}' no encontrado. "
-                "Compila con: cd compiler && make scanner"
+                f"Scanner '{SCANNER_BINARY.name}' not found. "
+                "Build it with: cd compiler && make scanner"
             )
 
     def test_scanner_vector_add_tokens(self):
         result = _run_scanner(FIXTURES_VALID / "vector_add.py")
         assert result.returncode == 0
         out = result.stdout
-        # Tokens que siempre deben aparecer en un kernel bien formado
-        assert "DEF"     in out, "No encontró token DEF"
-        assert "INDENT"  in out, "No encontró token INDENT"
-        assert "DEDENT"  in out, "No encontró token DEDENT"
-        assert "NEWLINE" in out, "No encontró token NEWLINE"
+        # Tokens that should always appear in a well-formed kernel.
+        assert "DEF"     in out, "Token DEF was not found"
+        assert "INDENT"  in out, "Token INDENT was not found"
+        assert "DEDENT"  in out, "Token DEDENT was not found"
+        assert "NEWLINE" in out, "Token NEWLINE was not found"
 
     def test_scanner_emits_jit_tokens(self):
         result = _run_scanner(FIXTURES_VALID / "vector_add.py")
         out = result.stdout
         assert "triton" in out or "NAME" in out, (
-            "No encontró identificadores en el stream de tokens"
+            "No identifiers were found in the token stream"
         )
 
     def test_scanner_all_valid_fixtures(self):
-        """El scanner no debe explotar en ningún fixture válido."""
+        """The scanner should not crash on any valid fixture."""
         for f in sorted(FIXTURES_VALID.glob("*.py")):
             r = _run_scanner(f)
             assert r.returncode == 0, (
-                f"Scanner falló en {f.name}:\n{r.stderr}"
+                f"Scanner failed on {f.name}:\n{r.stderr}"
             )
 
     def test_scanner_indent_dedent_balance(self):
-        """Número de INDENT debe ser igual a número de DEDENT."""
+        """The number of INDENT tokens must equal the number of DEDENT tokens."""
         result = _run_scanner(FIXTURES_VALID / "vector_add.py")
         assert result.returncode == 0
         lines = result.stdout.splitlines()
         n_indent  = sum(1 for l in lines if "INDENT"  in l and "DEDENT" not in l)
         n_dedent  = sum(1 for l in lines if "DEDENT"  in l)
         assert n_indent == n_dedent, (
-            f"INDENT/DEDENT desbalanceados: {n_indent} vs {n_dedent}"
+            f"Unbalanced INDENT/DEDENT tokens: {n_indent} vs {n_dedent}"
         )
 
     def test_scanner_number_types(self):
@@ -313,13 +312,13 @@ class TestScanner:
 
 
 # ---------------------------------------------------------------------------
-# Tests de integración end-to-end (compiler completo)
+# End-to-end integration tests (full compiler)
 # ---------------------------------------------------------------------------
 
 class TestEndToEnd:
     """
-    Genera kernels en memoria con tempfile y los pasa directamente
-    al binario C para validar gramática y tabla de símbolos.
+    Generate kernels in memory with tempfile and pass them directly to the C
+    binary to validate grammar and the symbol table.
     """
 
     @pytest.fixture(autouse=True)
@@ -349,22 +348,22 @@ class TestEndToEnd:
         assert r.returncode == 0, f"stderr: {r.stderr}"
 
     def test_kernel_with_comment_first_line(self):
-        """Bug #1 regresión: comentario como primera línea del cuerpo."""
+        """Bug #1 regression: comment as the first body line."""
         src = (
             "import triton\nimport triton.language as tl\n\n"
             "@triton.jit\n"
             "def k(x_ptr, N: tl.constexpr):\n"
-            "    # primer comentario\n"
+            "    # first comment\n"
             "    pid = tl.program_id(axis=0)\n"
             "    tl.store(x_ptr + pid, 1.0)\n"
         )
         r = self._run_src(src)
         assert r.returncode == 0, (
-            f"Bug #1 regresión — comentario primera línea:\n{r.stderr}"
+            f"Bug #1 regression, first-line comment:\n{r.stderr}"
         )
 
     def test_kernel_tl_arange_in_arithmetic(self):
-        """Bug #2 regresión: tl.arange embebido en expresión aritmética."""
+        """Bug #2 regression: tl.arange embedded in an arithmetic expression."""
         src = (
             "import triton\nimport triton.language as tl\n\n"
             "@triton.jit\n"
@@ -374,12 +373,12 @@ class TestEndToEnd:
             "    tl.store(x_ptr + offs, 0.0)\n"
         )
         r = self._run_src(src)
-        assert r.returncode == 0, f"Bug #2 regresión:\n{r.stderr}"
-        # tl.arange debe aparecer en la tabla de símbolos
-        assert "arange" in r.stdout, "No detectó tl.arange en tabla de símbolos"
+        assert r.returncode == 0, f"Bug #2 regression:\n{r.stderr}"
+        # tl.arange must appear in the symbol table.
+        assert "arange" in r.stdout, "Did not detect tl.arange in the symbol table"
 
     def test_kernel_tl_dot_in_aug_assign(self):
-        """Bug #3 regresión: tl.dot en aug-assign."""
+        """Bug #3 regression: tl.dot in aug-assign."""
         src = (
             "import triton\nimport triton.language as tl\n\n"
             "@triton.jit\n"
@@ -391,11 +390,11 @@ class TestEndToEnd:
             "    tl.store(x_ptr + offs, acc)\n"
         )
         r = self._run_src(src)
-        assert r.returncode == 0, f"Bug #3 regresión:\n{r.stderr}"
-        assert "dot" in r.stdout, "No detectó tl.dot"
+        assert r.returncode == 0, f"Bug #3 regression:\n{r.stderr}"
+        assert "dot" in r.stdout, "Did not detect tl.dot"
 
     def test_kernel_return_type_annotation(self):
-        """Bug #4 regresión: -> None en la firma del kernel."""
+        """Bug #4 regression: -> None in the kernel signature."""
         src = (
             "import triton\nimport triton.language as tl\n\n"
             "@triton.jit\n"
@@ -404,10 +403,10 @@ class TestEndToEnd:
             "    tl.store(x_ptr + pid, 0.0)\n"
         )
         r = self._run_src(src)
-        assert r.returncode == 0, f"Bug #4 regresión:\n{r.stderr}"
+        assert r.returncode == 0, f"Bug #4 regression:\n{r.stderr}"
 
     def test_kernel_break_continue(self):
-        """Bug #5/#6 regresión: break y continue dentro de for."""
+        """Bug #5/#6 regression: break and continue inside for."""
         src = (
             "import triton\nimport triton.language as tl\n\n"
             "@triton.jit\n"
@@ -420,7 +419,7 @@ class TestEndToEnd:
             "        tl.store(x_ptr + i, 1.0)\n"
         )
         r = self._run_src(src)
-        assert r.returncode == 0, f"Bug #5/6 regresión:\n{r.stderr}"
+        assert r.returncode == 0, f"Bug #5/6 regression:\n{r.stderr}"
 
     def test_kernel_raise_is_out_of_scope(self):
         src = (
@@ -460,7 +459,7 @@ class TestEndToEnd:
             "                tl.store(x_ptr + i * N + j, 0.0)\n"
         )
         r = self._run_src(src)
-        assert r.returncode == 0, f"Deep nesting falló:\n{r.stderr}"
+        assert r.returncode == 0, f"Deep nesting failed:\n{r.stderr}"
 
     def test_bitwise_and_shift_expressions(self):
         src = (
@@ -472,7 +471,7 @@ class TestEndToEnd:
             "    tl.store(x_ptr + mask, shifted)\n"
         )
         r = self._run_src(src)
-        assert r.returncode == 0, f"Bitwise/shift falló:\n{r.stderr}"
+        assert r.returncode == 0, f"Bitwise/shift failed:\n{r.stderr}"
 
     def test_multiple_decorators(self):
         src = (
@@ -483,7 +482,7 @@ class TestEndToEnd:
             "    tl.store(x_ptr, 0.0)\n"
         )
         r = self._run_src(src)
-        assert r.returncode == 0, f"Múltiples decoradores fallaron:\n{r.stderr}"
+        assert r.returncode == 0, f"Multiple decorators failed:\n{r.stderr}"
 
     def test_duplicate_kernel_error(self):
         src = (
@@ -500,7 +499,7 @@ class TestEndToEnd:
         has_error = (
             r.returncode != 0
             or "error" in combined.lower()
-            or "duplicad" in combined.lower()
-            or "ya declarad" in combined.lower()
+            or "duplicate" in combined.lower()
+            or "already declared" in combined.lower()
         )
-        assert has_error, "No detectó kernel duplicado"
+        assert has_error, "Did not detect duplicate kernel"

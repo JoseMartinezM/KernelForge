@@ -1,9 +1,9 @@
 """
-Fixture VÁLIDO — Kernel de suma de vectores (el "Hello World" de Triton).
-El translator debe:
-  - Detectar 1 kernel con @triton.jit
-  - Registrar BLOCK_SIZE como constexpr
-  - Detectar tl.program_id, tl.arange, tl.load, tl.store
+VALID fixture - Vector-add kernel (Triton's "Hello World").
+The translator should:
+  - Detect one kernel with @triton.jit
+  - Register BLOCK_SIZE as constexpr
+  - Detect tl.program_id, tl.arange, tl.load, and tl.store
 """
 
 import triton

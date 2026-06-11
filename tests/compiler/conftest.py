@@ -1,4 +1,4 @@
-"""Agrega el root del proyecto al path para que `compiler` sea importable."""
+"""Add the project root to the path so `compiler` is importable."""
 import sys
 from pathlib import Path
 

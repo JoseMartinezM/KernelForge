@@ -1,6 +1,6 @@
 """
-Fixture INVÁLIDO — función sin decorador @triton.jit.
-El translator debe emitir una advertencia sobre el decorador faltante.
+INVALID fixture - function without the @triton.jit decorator.
+The translator should emit a warning about the missing decorator.
 """
 
 import triton.language as tl
