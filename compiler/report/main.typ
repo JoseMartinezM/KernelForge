@@ -166,13 +166,13 @@ The supported kernel subset includes decorators, function definitions, parameter
 
 The formal input recognized by the parser is one or more top-level Triton JIT blocks:
 
-#mini-source([Accepted JIT block shape], [
+#artifact([Accepted JIT block shape], [
 ```text
 @triton.jit
 def kernel_name(parameters):
     statements
 ```
-]) <fig-jit-block-shape>
+])
 
 The scanner treats the surrounding file as transport context, not as part of the validated language. This is the reason the implementation can run against practical fixtures that include imports and test harness code while still keeping the compiler front end small, auditable, and focused on GPU kernels.
 
@@ -389,29 +389,29 @@ The numeric design is split into decimal/floating forms and base-prefixed intege
     node((-0.75, 0), [Start], stroke: none),
     edge((-0.75, 0), (0, 0), "-|>"),
     node((0, 0), [$D_0$], radius: 6.5mm),
-    edge((0, 0), (1.1, 0), "-|>", [digit]),
-    node((1.1, 0), [$D_1$], name: <dec-d1>, radius: 6.5mm, stroke: 1.4pt + ink),
+    edge((0, 0), (1.25, 0), "-|>", [digit]),
+    node((1.25, 0), [$D_1$], name: <dec-d1>, radius: 6.5mm, stroke: 1.4pt + ink),
     edge(<dec-d1>, "-|>", <dec-d1>, [digit], bend: 125deg, loop-angle: 90deg),
-    edge((1.1, 0), (2.2, -0.75), "-|>", [`.`]),
-    node((2.2, -0.75), [$F_1$], name: <dec-f1>, radius: 6.5mm, stroke: 1.4pt + ink),
-    edge(<dec-f1>, "-|>", <dec-f1>, [digit], bend: 125deg, loop-angle: 90deg),
-    edge((0, 0), (1.1, -1.35), "-|>", [`.`]),
-    node((1.1, -1.35), [$P$], radius: 6.5mm),
-    edge((1.1, -1.35), (2.2, -1.35), "-|>", [digit]),
-    node((2.2, -1.35), [$F_2$], name: <dec-f2>, radius: 6.5mm, stroke: 1.4pt + ink),
-    edge(<dec-f2>, "-|>", <dec-f2>, [digit], bend: 125deg, loop-angle: 90deg),
-    edge((1.1, 0), (2.2, 0.75), "-|>", [`e/E`]),
-    edge((2.2, -0.75), (2.95, 0.15), "-|>", [`e/E`]),
-    edge((2.2, -1.35), (2.95, -0.55), "-|>", [`e/E`]),
-    node((3.35, 0.15), [$E_s$], radius: 6.5mm),
-    edge((3.35, 0.15), (4.35, 0.75), "-|>", [`+/-`]),
-    node((4.35, 0.75), [$E_±$], radius: 6.5mm),
-    edge((3.35, 0.15), (4.35, -0.15), "-|>", [digit]),
-    edge((4.35, 0.75), (4.35, -0.15), "-|>", [digit]),
-    node((4.35, -0.15), [$E_1$], name: <dec-e1>, radius: 6.5mm, stroke: 1.4pt + ink),
+    edge((1.25, 0), (2.6, -0.48), "-|>", [`.`]),
+    node((2.6, -0.48), [$F_1$], name: <dec-f1>, radius: 6.5mm, stroke: 1.4pt + ink),
+    edge(<dec-f1>, "-|>", <dec-f1>, bend: 125deg, loop-angle: 90deg),
+    edge((0, 0), (1.25, -1.75), "-|>", [`.`]),
+    node((1.25, -1.75), [$P$], radius: 6.5mm),
+    edge((1.25, -1.75), (2.6, -1.75), "-|>", [digit]),
+    node((2.6, -1.75), [$F_2$], name: <dec-f2>, radius: 6.5mm, stroke: 1.4pt + ink),
+    edge(<dec-f2>, "-|>", <dec-f2>, bend: 125deg, loop-angle: -90deg),
+    node((3.75, 0.35), [$E_s$], name: <dec-es>, radius: 6.5mm),
+    edge(<dec-d1>, "-|>", <dec-es>, [`e/E`], label-pos: 0.58),
+    edge(<dec-f1>, "-|>", <dec-es>),
+    edge(<dec-f2>, "-|>", <dec-es>),
+    edge(<dec-es>, "-|>", (5.15, 1.25), [`+/-`], label-pos: 0.5),
+    node((5.15, 1.25), [$E_±$], name: <dec-epm>, radius: 6.5mm),
+    edge(<dec-es>, "-|>", (5.15, -0.35), [digit], label-pos: 0.58),
+    edge(<dec-epm>, "-|>", (5.15, -0.35), [digit], label-pos: 0.44),
+    node((5.15, -0.35), [$E_1$], name: <dec-e1>, radius: 6.5mm, stroke: 1.4pt + ink),
     edge(<dec-e1>, "-|>", <dec-e1>, [digit], bend: 125deg, loop-angle: 90deg),
   ),
-  caption: [Decimal integer and floating-literal DFA. `D_1` accepts `NUMBER_INT`; `F_1`, `F_2`, and `E_1` accept `NUMBER_FLOAT`.],
+  caption: [Decimal integer and floating-literal DFA. `D_1` accepts `NUMBER_INT`; `F_1`, `F_2`, and `E_1` accept `NUMBER_FLOAT`; unlabeled loops on accepting float-body states consume additional digits, and unlabeled edges into `E_s` consume `e/E`.],
 ) <fig-decimal-float-dfa>
 
 #figure(
@@ -448,15 +448,17 @@ The four string DFAs share the same structure and differ only by delimiter lengt
     node((-0.75, 0), [Start], stroke: none),
     edge((-0.75, 0), (0, 0), "-|>"),
     node((0, 0), [$S_0$], name: <str-s0>, radius: 6.5mm),
-    edge(<str-s0>, "-|>", <str-s0>, [`f/r/b/u` prefix], bend: 125deg, loop-angle: 90deg),
-    edge((0, 0), (1.25, 0), "-|>", [opening delimiter]),
-    node((1.25, 0), [$S_1$], name: <str-s1>, radius: 6.5mm),
-    edge(<str-s1>, "-|>", <str-s1>, [non-delimiter char], bend: 125deg, loop-angle: 90deg),
-    edge(<str-s1>, "-|>", <str-s1>, [`\\.` escape], bend: 125deg, loop-angle: 250deg),
-    edge((1.25, 0), (2.6, 0), "-|>", [matching delimiter]),
-    node((2.6, 0), [$S_2$], radius: 6.5mm, stroke: 1.4pt + ink),
+    edge(<str-s0>, "-|>", <str-s0>, [prefix char], bend: 125deg, loop-angle: 90deg),
+    edge(<str-s0>, "-|>", (1.55, 0), [open], label-pos: 0.35),
+    node((1.55, 0), [$S_1$], name: <str-s1>, radius: 6.5mm),
+    edge(<str-s1>, "-|>", <str-s1>, bend: 125deg, loop-angle: 90deg),
+    edge(<str-s1>, "-|>", (2.95, -1.5), [\\], label-pos: 0.44),
+    node((2.95, -1.5), [Esc], name: <str-esc>, radius: 6.5mm),
+    edge(<str-esc>, "-|>", <str-s1>, [\\], bend: 20deg, label-pos: 0.28),
+    edge(<str-s1>, "-|>", (3.15, 0), [close], label-pos: 0.55),
+    node((3.15, 0), [$S_2$], radius: 6.5mm, stroke: 1.4pt + ink),
   ),
-  caption: [Grouped string-literal DFA. Single-line variants reject unescaped physical newlines; triple-delimited variants use the same body loop until the matching triple delimiter.],
+  caption: [Grouped string-literal DFA. Prefix characters are consumed before the opener; the unlabeled `S_1` loop consumes body characters, the edge to `Esc` consumes one backslash, and the escape state consumes the following character. Single-line variants reject unescaped physical newlines, while triple-delimited variants keep the body loop until the matching triple delimiter.],
 ) <fig-string-dfa>
 
 === Operator and delimiter DFAs
@@ -467,47 +469,144 @@ Operators are designed as a trie so the scanner can take the longest valid path 
   diagram(
     node-stroke: 0.8pt + ink,
     edge-stroke: 0.8pt + ink,
-    node((-0.7, 0), [Start], stroke: none),
-    edge((-0.7, 0), (0, 0), "-|>"),
-    node((0, 0), [$O_0$], radius: 6.5mm),
-    edge((0, 0), (1.1, -0.9), "-|>", [`*` or `/`]),
-    node((1.1, -0.9), [$O_1$], radius: 6.5mm, stroke: 1.4pt + ink),
-    edge((1.1, -0.9), (2.25, -0.9), "-|>", [same char]),
-    node((2.25, -0.9), [$O_2$], radius: 6.5mm, stroke: 1.4pt + ink),
-    edge((2.25, -0.9), (3.35, -0.9), "-|>", [`=`]),
-    node((3.35, -0.9), [$O_3$], radius: 6.5mm, stroke: 1.4pt + ink),
-    edge((1.1, -0.9), (2.25, -1.65), "-|>", [`=`]),
-    node((2.25, -1.65), [$O_4$], radius: 6.5mm, stroke: 1.4pt + ink),
-    edge((0, 0), (1.1, 0.15), "-|>", [`<`, `>`, `!`, `=`]),
-    node((1.1, 0.15), [$C_1$], radius: 6.5mm, stroke: 1.4pt + ink),
-    edge((1.1, 0.15), (2.25, 0.15), "-|>", [`=`, or same shift char]),
-    node((2.25, 0.15), [$C_2$], radius: 6.5mm, stroke: 1.4pt + ink),
-    edge((2.25, 0.15), (3.35, 0.15), "-|>", [`=` for shifts]),
-    node((3.35, 0.15), [$C_3$], radius: 6.5mm, stroke: 1.4pt + ink),
-    edge((0, 0), (1.1, 1.1), "-|>", [single delimiter]),
-    node((1.1, 1.1), [$D_1$], radius: 6.5mm, stroke: 1.4pt + ink),
+    node((-0.65, 0), [Start], stroke: none),
+    edge((-0.65, 0), (0, 0), "-|>"),
+    node((0, 0), [$O_0$], radius: 5.6mm),
+
+    edge((0, 0), (1.35, -0.65), "-|>", [other singles], label-pos: 0.48),
+    node((1.35, -0.65), [$D$], radius: 5.6mm, stroke: 1.4pt + ink),
+
+    edge((0, 0), (1.35, 0.65), "-|>", [`.`], label-pos: 0.48),
+    node((1.35, 0.65), [$.$], name: <op-dot>, radius: 5.6mm, stroke: 1.4pt + ink),
+    edge(<op-dot>, "-|>", (2.35, 0.65), [`.`]),
+    node((2.35, 0.65), [$..$], radius: 5.6mm),
+    edge((2.35, 0.65), (3.35, 0.65), "-|>", [`.`]),
+    node((3.35, 0.65), [$...$], radius: 5.6mm, stroke: 1.4pt + ink),
   ),
-  caption: [Grouped operator/delimiter DFA. Accepting states map to single operators, compound operators, comparisons, shifts, augmented assignments, and one-character delimiters.],
+  caption: [One-character delimiter and ellipsis trie DFA. Thick-bordered states are accepting; `D` abbreviates remaining one-character tokens.],
+) <fig-operator-punctuation-dfa>
+
+#figure(
+  diagram(
+    node-stroke: 0.8pt + ink,
+    edge-stroke: 0.8pt + ink,
+    node((-0.65, 0), [Start], stroke: none),
+    edge((-0.65, 0), (0, 0), "-|>"),
+    node((0, 0), [$O_0$], radius: 5.6mm),
+
+    edge((0, 0), (1.35, -1.1), "-|>", [`*`], label-pos: 0.48),
+    node((1.35, -1.1), [$*$], name: <op-star>, radius: 5.6mm, stroke: 1.4pt + ink),
+    edge(<op-star>, "-|>", (2.35, -1.45), [`*`], label-pos: 0.62),
+    node((2.35, -1.45), [$**$], name: <op-dstar>, radius: 5.6mm, stroke: 1.4pt + ink),
+    edge(<op-star>, "-|>", (2.35, -0.75), [`=`], label-pos: 0.72),
+    node((2.35, -0.75), [$*=$], radius: 5.6mm, stroke: 1.4pt + ink),
+    edge(<op-dstar>, "-|>", (3.35, -1.45), [`=`]),
+    node((3.35, -1.45), [$**=$], radius: 5.6mm, stroke: 1.4pt + ink),
+
+    edge((0, 0), (1.35, 1.1), "-|>", [`/`], label-pos: 0.48),
+    node((1.35, 1.1), [`/`], name: <op-slash>, radius: 5.6mm, stroke: 1.4pt + ink),
+    edge(<op-slash>, "-|>", (2.35, 0.75), [`=`], label-pos: 0.72),
+    node((2.35, 0.75), [`/=`], radius: 5.6mm, stroke: 1.4pt + ink),
+    edge(<op-slash>, "-|>", (2.35, 1.45), label-pos: 0.62),
+    node((2.35, 1.45), [`//`], name: <op-dslash>, radius: 5.6mm, stroke: 1.4pt + ink),
+    edge(<op-dslash>, "-|>", (3.35, 1.45), [`=`]),
+    node((3.35, 1.45), [`//=`], radius: 5.6mm, stroke: 1.4pt + ink),
+  ),
+  caption: [Multiplicative operator trie DFA for `*`, `/`, powers, floor division, and their augmented assignments.],
+) <fig-operator-multiplicative-dfa>
+
+#figure(
+  diagram(
+    node-stroke: 0.8pt + ink,
+    edge-stroke: 0.8pt + ink,
+    node((-0.65, 0), [Start], stroke: none),
+    edge((-0.65, 0), (0, 0), "-|>"),
+    node((0, 0), [$O_0$], radius: 5.6mm),
+
+    edge((0, 0), (1.35, -0.75), "-|>", [`-`], label-pos: 0.48),
+    node((1.35, -0.75), [$-$], name: <op-minus>, radius: 5.6mm, stroke: 1.4pt + ink),
+    edge(<op-minus>, "-|>", (2.35, -1.05), [`=`], label-pos: 0.55),
+    node((2.35, -1.05), [`-=`], radius: 5.6mm, stroke: 1.4pt + ink),
+    edge(<op-minus>, "-|>", (2.35, -0.45), [`>`], label-pos: 0.55),
+    node((2.35, -0.45), [`->`], radius: 5.6mm, stroke: 1.4pt + ink),
+
+    edge((0, 0), (1.45, 0.85), "-|>", [`+ % & | ^`], label-pos: 0.36),
+    node((1.45, 0.85), [$G$], name: <op-aug>, radius: 5.6mm, stroke: 1.4pt + ink),
+    edge(<op-aug>, "-|>", (2.45, 0.85), [`=`]),
+    node((2.45, 0.85), [$G=$], radius: 5.6mm, stroke: 1.4pt + ink),
+  ),
+  caption: [Additive, arrow, and simple augmented-assignment trie DFA. `G` abbreviates the grouped operators `+`, `%`, `&`, `|`, and `^`.],
+) <fig-operator-additive-dfa>
+
+#figure(
+  diagram(
+    node-stroke: 0.8pt + ink,
+    edge-stroke: 0.8pt + ink,
+    node((-0.65, 0), [Start], stroke: none),
+    edge((-0.65, 0), (0, 0), "-|>"),
+    node((0, 0), [$O_0$], radius: 5.6mm),
+
+    edge((0, 0), (1.35, -1.35), "-|>", [`<`], label-pos: 0.45),
+    node((1.35, -1.35), [$<$], name: <op-lt>, radius: 5.6mm, stroke: 1.4pt + ink),
+    edge(<op-lt>, "-|>", (2.35, -1.65), [`=`], label-pos: 0.55),
+    node((2.35, -1.65), [$<=$], radius: 5.6mm, stroke: 1.4pt + ink),
+    edge(<op-lt>, "-|>", (2.35, -1.05), [`<`], label-pos: 0.55),
+    node((2.35, -1.05), [$<<$], name: <op-lshift>, radius: 5.6mm, stroke: 1.4pt + ink),
+    edge(<op-lshift>, "-|>", (3.35, -1.05), [`=`]),
+    node((3.35, -1.05), [$<<=$], radius: 5.6mm, stroke: 1.4pt + ink),
+
+    edge((0, 0), (1.35, 0.0), "-|>", [`>`], label-pos: 0.45),
+    node((1.35, 0.0), [$>$], name: <op-gt>, radius: 5.6mm, stroke: 1.4pt + ink),
+    edge(<op-gt>, "-|>", (2.35, -0.3), [`=`], label-pos: 0.55),
+    node((2.35, -0.3), [$>=$], radius: 5.6mm, stroke: 1.4pt + ink),
+    edge(<op-gt>, "-|>", (2.35, 0.3), [`>`], label-pos: 0.55),
+    node((2.35, 0.3), [$>>$], name: <op-rshift>, radius: 5.6mm, stroke: 1.4pt + ink),
+    edge(<op-rshift>, "-|>", (3.35, 0.3), [`=`]),
+    node((3.35, 0.3), [$>>=$], radius: 5.6mm, stroke: 1.4pt + ink),
+
+    edge((0, 0), (1.35, 1.15), "-|>", [`=`], label-pos: 0.45),
+    node((1.35, 1.15), [`=`], name: <op-eq>, radius: 5.6mm, stroke: 2pt + ink),
+    edge(<op-eq>, "-|>", (2.35, 1.15), [`=`]),
+    node((2.35, 1.15), [$==$], radius: 5.6mm, stroke: 1.4pt + ink),
+
+    edge((0, 0), (1.35, 2.1), "-|>", [`!`], label-pos: 0.45),
+    node((1.35, 2.1), [$!$], name: <op-bang>, radius: 5.6mm),
+    edge(<op-bang>, "-|>", (2.35, 2.1), [`=`]),
+    node((2.35, 2.1), [`!=`], radius: 5.6mm, stroke: 1.4pt + ink),
+  ),
+  caption: [Comparison, equality, and shift trie DFA. Thick-bordered states are accepting except the intentionally non-accepting `!` prefix, so only `!=` is valid.],
 ) <fig-operator-dfa>
 
-The delimiter branch accepts `(`, `)`, `[`, `]`, `{`, `}`, `:`, `,`, `.`, and `;`. Open delimiters increment `paren_depth`; close delimiters decrement it when positive. That side effect is part of the layout design because newlines inside a nonzero delimiter depth do not generate `NEWLINE`, `INDENT`, or `DEDENT`.
+The `D` branch accepts `(`, `)`, `[`, `]`, `{`, `}`, `:`, `,`, `;`, `~`, and `@`; `.` is shown separately because it is also the prefix of `...`. The operator figures share the same start state but are split by token family to keep the initial trie branches readable. Open delimiters increment `paren_depth`; close delimiters decrement it when positive. That side effect is part of the layout design because newlines inside a nonzero delimiter depth do not generate `NEWLINE`, `INDENT`, or `DEDENT`.
 
 === Layout DFA
 
 The layout automaton operates only in `JIT` mode and only on physical newlines. It treats indentation width as a stack value rather than as a fixed finite alphabet, so the table in @tab-layout-transition-table gives the precise transition rule.
 
 #figure(
-  automaton(
-    (
-      L0: (L0: [newline inside open delimiter], L1: [newline at depth 0]),
-      L1: (L0: [same indentation], L2: [larger indentation], L3: [smaller indentation], ERR: [inconsistent indentation]),
-      L2: (L0: [queue `INDENT`]),
-      L3: (L0: [queue one or more `DEDENT`], HOST: [dedent to column 0 after JIT body]),
-    ),
-    initial: "L0",
-    final: ("L0", "HOST"),
+  diagram(
+    node-stroke: 0.8pt + ink,
+    edge-stroke: 0.8pt + ink,
+    node((-0.7, 0), [Start], stroke: none),
+    edge((-0.7, 0), (0, 0), "-|>"),
+    node((0, 0), [$L_0$], name: <lay-l0>, radius: 6.5mm, stroke: 1.4pt + ink),
+    edge(<lay-l0>, "-|>", <lay-l0>, [inside delimiter], bend: 125deg, loop-angle: -90deg),
+    edge(<lay-l0>, "-|>", (1.65, 0), [depth 0 newline], label-pos: 0.5),
+    node((1.65, 0), [$L_1$], name: <lay-l1>, radius: 6.5mm),
+
+    edge(<lay-l1>, "-|>", <lay-l0>, [same], bend: 35deg, label-pos: 0.5),
+    edge(<lay-l1>, "-|>", (3.15, -1.1), [larger], label-pos: 0.5),
+    node((3.15, -1.1), [$L_2$], name: <lay-l2>, radius: 6.5mm),
+
+    edge(<lay-l1>, "-|>", (3.15, 0.45), [smaller], label-pos: 0.5),
+    node((3.15, 0.45), [$L_3$], name: <lay-l3>, radius: 6.5mm),
+    edge(<lay-l3>, "-|>", (4.8, 0.45), [column 0], label-pos: 0.5),
+    node((4.8, 0.45), [HOST], radius: 7mm, stroke: 1.4pt + ink),
+
+    edge(<lay-l1>, "-|>", (3.15, 1.55), [bad], label-pos: 0.55),
+    node((3.15, 1.55), [ERR], radius: 6.5mm),
   ),
-  caption: [Layout DFA for `NEWLINE`, `INDENT`, `DEDENT`, and top-level dedent back to host mode.],
+  caption: [Layout DFA for `NEWLINE`, `INDENT`, `DEDENT`, and top-level dedent back to host mode. Action states `L_2` and `L_3` queue `INDENT` or one or more `DEDENT` tokens, respectively, and then resume at `L_0`; short edge labels are expanded by the transition table below.],
 ) <fig-layout-dfa>
 
 == Finite transition table <finite-transition-table>
