@@ -2,7 +2,7 @@
 
 KernelForge is a research monorepo for improving LLM generation of Triton
 GPU kernels with constrained generation and validation. The repo combines
-benchmark tooling, exploratory notebooks, grammar experiments, a course LEX/YACC
+benchmark tooling, exploratory notebooks, grammar experiments, a course Flex/Bison
 compiler component, inference backend experiments, and the current
 kernel-development agent loop.
 
@@ -21,13 +21,13 @@ interfaces around that package.
   current implementation uses **Pi Agent** tools under `apps/agent/`.
 - Maintain a first MVP validation loop with a basic semantic checker before
   expanding the agent workflow.
-- Implement a LEX/YACC syntax validator for the course requirement.
+- Maintain a Flex/Bison syntax validator for the course requirement.
 - Keep benchmark, inference, evaluation, and notebook workflows reproducible.
 
 ## Current direction
 
-The next milestone is not a broad product surface. It is a validated kernel
-development loop:
+The near-term focus is not a broad product surface. It is hardening and
+measuring a validated kernel-development loop:
 
 1. Generate candidate Triton kernels.
 2. Run a basic semantic checker over obvious Triton mistakes.
@@ -47,7 +47,8 @@ debugging, but the production smoke tests should exercise the vLLM/XGrammar path
 
 ```text
 .
-├── compiler/                # Course LEX/YACC syntax-validator home
+├── compiler/                # Course Flex/Bison Triton JIT syntax validator
+│   └── report/              # Typst report for the compiler component
 ├── benchmarks/              # First-party benchmark datasets, including KAGBench
 ├── docs/                    # Onboarding, evaluation, architecture notes
 ├── grammar/                 # GBNF grammar assets and viewers
@@ -59,6 +60,7 @@ debugging, but the production smoke tests should exercise the vLLM/XGrammar path
 │   └── grammar/             # Python grammar/constrained-generation utilities
 ├── tests/                   # CPU-first regression tests and opt-in corpus/GPU tests
 ├── apps/                    # Agent-loop adapters and multi-file surfaces
+├── poster/                  # Presentation/poster assets
 ├── vendor/TritonBench/      # Vendored upstream benchmark data/scripts
 └── runs/                    # Generated ledgers/results; git-ignored
 ```
@@ -107,6 +109,10 @@ uv run python -m kernelforge.agent list-tasks
 # Build one KAGBench workflow payload without calling models or GPUs
 uv run python -m kernelforge.agent run --limit 1 --dry-run
 
+# Course compiler front end
+make -C compiler compiler scanner
+make -C compiler test
+
 # Interactive notebooks
 uv run marimo edit notebooks/grammar.py
 uv run marimo edit notebooks/tritonbench.py
@@ -126,6 +132,7 @@ Set only the provider credentials needed for the workflow you are running:
 export LIGHTNING_API_KEY="..."
 export MODAL_API_KEY="..."      # or MODAL_API_TOKEN
 export MODAL_API_SECRET="..."
+export ANTHROPIC_API_KEY="..."  # Pi Agent brain
 export GOOGLE_API_KEY="..."     # older Google AI Studio notebook path only
 ```
 
@@ -133,9 +140,9 @@ Keep local `.env*` files uncommitted.
 
 ## Current stable entry points
 
-- `benchmarks/KAGBench/`: 32-task agentic Triton synthesis benchmark built from
-  TritonBench-G cases, with public tests, hidden/unit tests, prompts, and
-  PyTorch references.
+- `benchmarks/KAGBench/`: agentic Triton synthesis benchmark built from
+  TritonBench cases, with public tests, hidden/unit tests, prompts, and PyTorch
+  references. The current tree contains 48 case directories.
 - `kernelforge.agent`: reusable teacher/implementer workflow over KAGBench,
   including prompt construction, grammar request shaping, static checks,
   local/Modal evaluation adapters, and JSONL ledgers.
@@ -148,6 +155,8 @@ Keep local `.env*` files uncommitted.
 - `scripts/modal_vllm.py`: Modal deployment for the Gemma 4 E4B vLLM backend.
 - `apps/agent/`: Pi Agent tools for generating, checking, validating, and logging
   kernels.
+- `compiler/`: Flex/Bison course compiler front end for top-level
+  `@triton.jit` blocks, with scanner/parser binaries, tests, and a Typst report.
 - `grammar/triton.gbnf`: current XGrammar/vLLM constrained-decoding grammar
   experiment.
 
@@ -159,3 +168,6 @@ Generated inference and evaluation ledgers should go under `runs/`.
   workflow.
 - `docs/evaluate.md`: Colab/local evaluation notes for generated kernels.
 - `docs/architecture.md`: monorepo boundaries and migration rule.
+- `compiler/report/`: course compiler report source.
+- `docs/compiler_oral_exam_answers.md`: English oral-exam notes for the
+  compiler component.
