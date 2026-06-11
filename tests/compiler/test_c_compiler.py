@@ -201,6 +201,30 @@ def _run_scanner(fixture: Path, timeout: int = 10) -> subprocess.CompletedProces
     )
 
 
+def _run_scanner_source(src: str, timeout: int = 10) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        [str(SCANNER_BINARY)],
+        input=src,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=timeout,
+    )
+
+
+def _token_lines(output: str) -> list[str]:
+    return [line for line in output.splitlines() if line.startswith("< ")]
+
+
+def _token_names(output: str) -> list[str]:
+    names: list[str] = []
+    for line in _token_lines(output):
+        parts = line.split(",", maxsplit=2)
+        names.append(parts[0].removeprefix("<").strip())
+    return names
+
+
 class TestScanner:
 
     @pytest.fixture(autouse=True)
@@ -227,6 +251,147 @@ class TestScanner:
         assert "triton" in out or "NAME" in out, (
             "No identifiers were found in the token stream"
         )
+
+    def test_scanner_file_and_stdin_token_streams_match(self):
+        fixture = FIXTURES_VALID / "vector_add.py"
+        file_result = _run_scanner(fixture)
+        stdin_result = _run_scanner_source(fixture.read_text(encoding="utf-8"))
+
+        assert file_result.returncode == 0
+        assert stdin_result.returncode == 0
+        assert _token_lines(stdin_result.stdout) == _token_lines(file_result.stdout)
+
+    def test_scanner_skips_host_code_before_jit_decorator(self):
+        src = (
+            "import triton\n"
+            "HOST_ONLY = 123\n"
+            "def helper():\n"
+            "    return HOST_ONLY\n\n"
+            "@triton.jit\n"
+            "def k(x_ptr):\n"
+            "    tl.store(x_ptr, 0.0)\n"
+        )
+        result = _run_scanner_source(src)
+
+        assert result.returncode == 0
+        tokens = _token_lines(result.stdout)
+        assert tokens[0].startswith("< AT")
+        assert "HOST_ONLY" not in "\n".join(tokens)
+
+    def test_scanner_rejects_indented_nested_jit_decorator(self):
+        src = (
+            "def outer():\n"
+            "    @triton.jit\n"
+            "    def nested(x_ptr):\n"
+            "        tl.store(x_ptr, 0.0)\n"
+        )
+        result = _run_scanner_source(src)
+        combined = result.stdout + result.stderr
+
+        assert result.returncode != 0
+        assert "nested @triton.jit" in combined
+        assert not any(line.startswith("< AT") for line in _token_lines(result.stdout))
+
+    def test_scanner_longest_match_overlapping_lexemes(self):
+        src = (
+            "@triton.jit\n"
+            "def k(a, b):\n"
+            "    a **= 2\n"
+            "    b = a ** 2 * 3\n"
+            "    c = ...\n"
+            "    d = .5\n"
+            "    e = a // 2 / 3\n"
+            "    f /= 2\n"
+            "    g = a -> b\n"
+            "    h <<= 1\n"
+            "    i = h << 2\n"
+        )
+        result = _run_scanner_source(src)
+        tokens = _token_lines(result.stdout)
+
+        assert result.returncode == 0
+        for token_name, lexeme in [
+            ("DOUBLESTAREQ", "**="),
+            ("DOUBLESTAR", "**"),
+            ("STAR", "*"),
+            ("ELLIPSIS", "..."),
+            ("NUMBER_FLOAT", ".5"),
+            ("DOUBLESLASH", "//"),
+            ("SLASH", "/"),
+            ("SLASHEQ", "/="),
+            ("ARROW", "->"),
+            ("LSHIFTEQ", "<<="),
+            ("LSHIFT", "<<"),
+        ]:
+            assert any(token_name in line and lexeme in line for line in tokens), lexeme
+
+    def test_scanner_suppresses_layout_inside_delimiters(self):
+        src = (
+            "@triton.jit\n"
+            "def k(x_ptr):\n"
+            "    value = tl.load(\n"
+            "        x_ptr,\n"
+            "        mask=True,\n"
+            "    )\n"
+            "    tl.store(x_ptr, value)\n"
+        )
+        result = _run_scanner_source(src)
+        names = _token_names(result.stdout)
+
+        assert result.returncode == 0
+        assert names.count("INDENT") == 1
+        assert names.count("DEDENT") == 1
+
+    def test_scanner_symbol_table_is_unique_and_uses_first_line(self):
+        src = (
+            "@triton.jit\n"
+            "def k(x_ptr):\n"
+            "    value = 1\n"
+            "    value = value + 1\n"
+        )
+        result = _run_scanner_source(src)
+        symbol_table = result.stdout.split("=== Symbol table ===", maxsplit=1)[1]
+        value_rows = [
+            line for line in symbol_table.splitlines()
+            if " NAME" in line and " value" in line
+        ]
+
+        assert result.returncode == 0
+        assert len(value_rows) == 1
+        assert value_rows[0].rstrip().endswith("3")
+
+    def test_scanner_reports_unsupported_character(self):
+        result = _run_scanner_source(
+            "@triton.jit\n"
+            "def k(x_ptr):\n"
+            "    x = $\n"
+        )
+
+        assert result.returncode != 0
+        assert "unsupported character '$'" in result.stderr
+
+    def test_scanner_reports_inconsistent_indentation_and_recovers(self):
+        result = _run_scanner_source(
+            "@triton.jit\n"
+            "def k(x_ptr):\n"
+            "    ok = 1\n"
+            "  bad = 2\n"
+            "\n"
+        )
+
+        assert result.returncode != 0
+        assert "inconsistent indentation" in result.stderr
+        assert " bad" not in "\n".join(_token_lines(result.stdout))
+
+    def test_scanner_reports_excessive_indentation_depth(self):
+        lines = ["@triton.jit", "def k(x_ptr):"]
+        for depth in range(65):
+            lines.append(f"{'    ' * (depth + 1)}if True:")
+        lines.append(f"{'    ' * 66}tl.store(x_ptr, 0.0)")
+        result = _run_scanner_source("\n".join(lines) + "\n")
+
+        assert result.returncode != 0
+        assert "indentation nesting is too deep" in result.stderr
 
     def test_scanner_all_valid_fixtures(self):
         """The scanner should not crash on any valid fixture."""
@@ -309,6 +474,21 @@ class TestScanner:
             assert "STRING" in result.stdout
         finally:
             os.unlink(tmp)
+
+    def test_scanner_break_continue_are_keyword_tokens(self):
+        src = (
+            "@triton.jit\n"
+            "def k(x_ptr, N: tl.constexpr):\n"
+            "    for i in range(N):\n"
+            "        if i == 0:\n"
+            "            continue\n"
+            "        break\n"
+        )
+        result = _run_scanner_source(src)
+
+        assert result.returncode == 0
+        assert "< CONTINUE" in result.stdout
+        assert "< BREAK" in result.stdout
 
 
 # ---------------------------------------------------------------------------

@@ -20,6 +20,7 @@
   enum standalone_tokens {
     NAME = 258, STRING, NUMBER_INT, NUMBER_FLOAT, NUMBER_HEX, NUMBER_BIN,
     DEF, IF, ELIF, ELSE, FOR, IN, WHILE, WITH, AS, RETURN, ASSERT, PASS,
+    BREAK, CONTINUE,
     AND, OR, NOT, IS, TRUE, FALSE, NONE,
     NEWLINE, INDENT, DEDENT,
     DOUBLESTAREQ, DOUBLESLASHEQ, LSHIFTEQ, RSHIFTEQ,
@@ -105,6 +106,8 @@ static const char *token_name(int token)
         case RETURN: return "RETURN";
         case ASSERT: return "ASSERT";
         case PASS: return "PASS";
+        case BREAK: return "BREAK";
+        case CONTINUE: return "CONTINUE";
         case AND: return "AND";
         case OR: return "OR";
         case NOT: return "NOT";
@@ -274,6 +277,7 @@ static void reset_jit_state(void)
 %option nounput
 
 %x JIT
+%x BAD_INDENT
 
 DIGIT      [0-9]
 LETTER     [A-Za-z_]
@@ -340,6 +344,8 @@ SPACE      [ \t]+
     else if (strcmp(yytext, "return") == 0) return emit_token(RETURN, yytext);
     else if (strcmp(yytext, "assert") == 0) return emit_token(ASSERT, yytext);
     else if (strcmp(yytext, "pass") == 0)   return emit_token(PASS, yytext);
+    else if (strcmp(yytext, "break") == 0)  return emit_token(BREAK, yytext);
+    else if (strcmp(yytext, "continue") == 0) return emit_token(CONTINUE, yytext);
     else if (strcmp(yytext, "and") == 0)    return emit_token(AND, yytext);
     else if (strcmp(yytext, "or") == 0)     return emit_token(OR, yytext);
     else if (strcmp(yytext, "not") == 0)    return emit_token(NOT, yytext);
@@ -429,6 +435,7 @@ SPACE      [ \t]+
             if (indent_stack[indent_top] != width) {
                 fprintf(stderr, "LEXICAL ERROR line %d: inconsistent indentation\n", yylineno);
                 compiler_lexical_errors++;
+                BEGIN(BAD_INDENT);
             }
         }
 
@@ -442,6 +449,10 @@ SPACE      [ \t]+
         return queue_pop();
     }
 }
+
+<BAD_INDENT>[^\n]+                         { /* skip malformed physical line after indentation error */ }
+<BAD_INDENT>\n[ \t]*                       { BEGIN(JIT); yyless(0); }
+<BAD_INDENT><<EOF>>                         { return 0; }
 
 <JIT>\\\n                                { /* explicit line continuation */ }
 <JIT>{SPACE}                             { /* skip inline whitespace */ }

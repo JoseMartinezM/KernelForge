@@ -211,7 +211,7 @@ static void print_report(void)
 }
 
 %token <text> NAME STRING NUMBER_INT NUMBER_FLOAT NUMBER_HEX NUMBER_BIN
-%token DEF IF ELIF ELSE FOR IN WHILE WITH AS RETURN ASSERT PASS
+%token DEF IF ELIF ELSE FOR IN WHILE WITH AS RETURN ASSERT PASS BREAK CONTINUE
 %token AND OR NOT IS TRUE FALSE NONE
 %token NEWLINE INDENT DEDENT
 %token DOUBLESTAREQ DOUBLESLASHEQ LSHIFTEQ RSHIFTEQ
@@ -353,6 +353,8 @@ small_stmt
     | return_stmt
     | assert_stmt
     | PASS
+    | BREAK
+    | CONTINUE
     ;
 
 annotated_default_opt
