@@ -125,16 +125,16 @@
     numbering: none,
   )[
     #show outline.entry.where(level: 1): it => {
-      v(18pt, weak: true)
+      v(14pt, weak: true)
       text(fill: school-color)[#strong(it)]
     }
 
     #show outline.entry.where(level: 2): it => {
-      v(12pt, weak: true)
+      v(10pt, weak: true)
       text(fill: school-color)[#it]
     }
 
-    #set text(size: 12pt)
+    #set text(size: 10pt)
 
     #block(
       above: 0pt,
